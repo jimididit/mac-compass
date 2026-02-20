@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -50,14 +51,18 @@ func runRunAll(cmd *cobra.Command, args []string) error {
 		}
 	}
 	opts := runner.Options{
-		Timeout:   timeout,
-		UseSudo:   !noSudo,
-		SkipSudo:  noSudo,
-		VMMode:    vmMode,
-		OutWriter: cmd.OutOrStdout(),
-		ErrWriter: cmd.ErrOrStderr(),
+		Timeout:         timeout,
+		UseSudo:         !noSudo,
+		SkipSudo:        noSudo,
+		VMMode:          vmMode,
+		SudoAllowPrompt: hasTTY(),
+		OutWriter:       cmd.OutOrStdout(),
+		ErrWriter:       cmd.ErrOrStderr(),
 	}
 	ctx := cmd.Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	if jsonOutput {
 		var allResults []output.SectionResult

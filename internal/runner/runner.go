@@ -14,12 +14,13 @@ import (
 
 // Options configures how checks are run.
 type Options struct {
-	UseSudo   bool
-	Timeout   time.Duration
-	SkipSudo  bool // If true, skip checks that require sudo
-	VMMode    bool // If true, skip checks that require hardware (e.g. T2)
-	OutWriter interface{ Write([]byte) (int, error) }
-	ErrWriter interface{ Write([]byte) (int, error) }
+	UseSudo        bool
+	Timeout        time.Duration
+	SkipSudo       bool // If true, skip checks that require sudo
+	VMMode         bool // If true, skip checks that require hardware (e.g. T2)
+	SudoAllowPrompt bool // If true and running in a TTY, sudo will prompt for password when needed
+	OutWriter      interface{ Write([]byte) (int, error) }
+	ErrWriter      interface{ Write([]byte) (int, error) }
 }
 
 // DefaultOptions returns options with sensible defaults.
@@ -55,12 +56,13 @@ func RunCheck(ctx context.Context, ch catalog.Check, opts Options) error {
 		}
 	}
 
+	sudoArgs := sudoArgsForCheck(ch, opts)
 	var cmd *exec.Cmd
 	if ch.Sudo && opts.UseSudo {
 		if script != "" {
-			cmd = exec.CommandContext(runCtx, "sudo", "-n", "sh", "-c", script)
+			cmd = exec.CommandContext(runCtx, "sudo", append(sudoArgs, "sh", "-c", script)...)
 		} else {
-			cmd = exec.CommandContext(runCtx, "sudo", append([]string{"-n", ch.Command}, ch.Args...)...)
+			cmd = exec.CommandContext(runCtx, "sudo", append(sudoArgs, append([]string{ch.Command}, ch.Args...)...)...)
 		}
 	} else {
 		if script != "" {
@@ -101,12 +103,13 @@ func RunCheckCapture(ctx context.Context, ch catalog.Check, opts Options) (stdou
 		}
 	}
 
+	sudoArgs := sudoArgsForCheck(ch, opts)
 	var cmd *exec.Cmd
 	if ch.Sudo && opts.UseSudo {
 		if script != "" {
-			cmd = exec.CommandContext(runCtx, "sudo", "-n", "sh", "-c", script)
+			cmd = exec.CommandContext(runCtx, "sudo", append(sudoArgs, "sh", "-c", script)...)
 		} else {
-			cmd = exec.CommandContext(runCtx, "sudo", append([]string{"-n", ch.Command}, ch.Args...)...)
+			cmd = exec.CommandContext(runCtx, "sudo", append(sudoArgs, append([]string{ch.Command}, ch.Args...)...)...)
 		}
 	} else {
 		if script != "" {
@@ -140,6 +143,18 @@ func RunChecks(ctx context.Context, checks []catalog.Check, opts Options) []erro
 		}
 	}
 	return errs
+}
+
+// sudoArgsForCheck returns the arguments to pass to sudo before the actual command.
+// When SudoAllowPrompt is true, we omit -n so sudo can prompt for a password when needed.
+func sudoArgsForCheck(ch catalog.Check, opts Options) []string {
+	if !ch.Sudo || !opts.UseSudo {
+		return nil
+	}
+	if opts.SudoAllowPrompt {
+		return nil // allow sudo to prompt
+	}
+	return []string{"-n"} // non-interactive: fail if password required
 }
 
 // ExpandUserHome replaces ~ with the user's home directory in script.

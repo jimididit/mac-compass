@@ -43,20 +43,20 @@ func Execute() {
 }
 
 func runInteractive(cmd *cobra.Command, args []string) error {
-	fmt.Fprintln(cmd.OutOrStdout(), "mac-compass — macOS compromise detection")
+	fmt.Fprintln(cmd.OutOrStdout(), "mac-compass - macOS compromise detection")
 	fmt.Fprintln(cmd.OutOrStdout(), "")
 	fmt.Fprintln(cmd.OutOrStdout(), "Sections:")
-	fmt.Fprintln(cmd.OutOrStdout(), "  1. triage       — Quick triage (run first)")
-	fmt.Fprintln(cmd.OutOrStdout(), "  2. processes    — Process & memory analysis")
-	fmt.Fprintln(cmd.OutOrStdout(), "  3. kernel       — Kernel extensions & rootkit checks")
-	fmt.Fprintln(cmd.OutOrStdout(), "  4. persistence  — File system & persistence")
-	fmt.Fprintln(cmd.OutOrStdout(), "  5. network      — Network & monitoring")
-	fmt.Fprintln(cmd.OutOrStdout(), "  6. security-tools — Security tools & verification")
-	fmt.Fprintln(cmd.OutOrStdout(), "  7. advanced     — Advanced detection")
-	fmt.Fprintln(cmd.OutOrStdout(), "  8. checklist    — Incident response checklist")
-	fmt.Fprintln(cmd.OutOrStdout(), "  9. harden       — Preventive measures")
-	fmt.Fprintln(cmd.OutOrStdout(), " 10. refs         — References & resources")
-	fmt.Fprintln(cmd.OutOrStdout(), " 11. run-all      — Run all safe checks")
+	fmt.Fprintln(cmd.OutOrStdout(), "  1. triage       - Quick triage (run first)")
+	fmt.Fprintln(cmd.OutOrStdout(), "  2. processes    - Process & memory analysis")
+	fmt.Fprintln(cmd.OutOrStdout(), "  3. kernel       - Kernel extensions & rootkit checks")
+	fmt.Fprintln(cmd.OutOrStdout(), "  4. persistence  - File system & persistence")
+	fmt.Fprintln(cmd.OutOrStdout(), "  5. network      - Network & monitoring")
+	fmt.Fprintln(cmd.OutOrStdout(), "  6. security-tools - Security tools & verification")
+	fmt.Fprintln(cmd.OutOrStdout(), "  7. advanced     - Advanced detection")
+	fmt.Fprintln(cmd.OutOrStdout(), "  8. checklist    - Incident response checklist")
+	fmt.Fprintln(cmd.OutOrStdout(), "  9. harden       - Preventive measures")
+	fmt.Fprintln(cmd.OutOrStdout(), " 10. refs         - References & resources")
+	fmt.Fprintln(cmd.OutOrStdout(), " 11. run-all      - Run all safe checks")
 	fmt.Fprintln(cmd.OutOrStdout(), "")
 	fmt.Fprint(cmd.OutOrStdout(), "Enter number or subcommand (or press Enter for help): ")
 	scanner := bufio.NewScanner(cmd.InOrStdin())
@@ -67,13 +67,19 @@ func runInteractive(cmd *cobra.Command, args []string) error {
 	if choice == "" {
 		return cmd.Help()
 	}
-	// Delegate to subcommand by name or number
+	// Delegate to subcommand by name or number (call RunE directly so Cobra doesn't re-parse os.Args and show the menu again)
 	subName := choiceToSubcommand(choice)
 	if subName != "" {
 		sub, _, _ := rootCmd.Find([]string{subName})
 		if sub != nil && sub != rootCmd {
 			sub.SetArgs(args)
-			return sub.Execute()
+			if sub.RunE != nil {
+				return sub.RunE(sub, args)
+			}
+			if sub.Run != nil {
+				sub.Run(sub, args)
+				return nil
+			}
 		}
 	}
 	fmt.Fprintf(cmd.ErrOrStderr(), "Unknown choice: %q. Use 'mac-compass --help' for subcommands.\n", choice)

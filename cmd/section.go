@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,12 +25,13 @@ func runSection(cmd *cobra.Command, sectionID string) error {
 		return nil
 	}
 	opts := runner.Options{
-		Timeout:   timeout,
-		UseSudo:   !noSudo,
-		SkipSudo:  noSudo,
-		VMMode:    vmMode,
-		OutWriter: cmd.OutOrStdout(),
-		ErrWriter: cmd.ErrOrStderr(),
+		Timeout:         timeout,
+		UseSudo:         !noSudo,
+		SkipSudo:        noSudo,
+		VMMode:          vmMode,
+		SudoAllowPrompt: hasTTY(),
+		OutWriter:       cmd.OutOrStdout(),
+		ErrWriter:       cmd.ErrOrStderr(),
 	}
 	if reportPath != "" && !jsonOutput {
 		f, err := os.OpenFile(reportPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
@@ -41,6 +43,9 @@ func runSection(cmd *cobra.Command, sectionID string) error {
 		opts.ErrWriter = io.MultiWriter(opts.ErrWriter, f)
 	}
 	ctx := cmd.Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	if jsonOutput {
 		var results []output.CheckResult
@@ -74,3 +79,12 @@ func runSection(cmd *cobra.Command, sectionID string) error {
 	return nil
 }
 
+// hasTTY reports whether the process has a controlling terminal (so sudo can prompt for a password).
+func hasTTY() bool {
+	f, err := os.Open("/dev/tty")
+	if err != nil {
+		return false
+	}
+	f.Close()
+	return true
+}
