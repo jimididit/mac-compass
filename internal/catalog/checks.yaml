@@ -1,0 +1,280 @@
+# mac-compass check catalog (authored from reference doc detecting-compromise.md)
+# section: triage | processes | kernel | persistence | network | security-tools | advanced | harden
+
+checks:
+  # --- 1. Quick Triage ---
+  - section: triage
+    name: SIP status
+    description: Check System Integrity Protection status; expected "enabled"
+    command: csrutil
+    args: [status]
+    sudo: false
+    vm_safe: true
+  - section: triage
+    name: Gatekeeper status
+    description: Verify Gatekeeper (assessments) is enabled
+    command: spctl
+    args: [--status]
+    sudo: false
+    vm_safe: true
+  - section: triage
+    name: Non-Apple kernel extensions
+    description: List loaded KEXTs excluding Apple
+    script: kextstat | grep -v com.apple
+    sudo: false
+    vm_safe: true
+  - section: triage
+    name: All loaded KEXTs (detailed)
+    description: List all loaded kernel extensions with details
+    command: kextstat
+    args: [-l]
+    sudo: false
+    vm_safe: true
+  - section: triage
+    name: KEXT cache (prelinked kernel)
+    description: Check kernel extension signing/cache
+    command: kextcache
+    args: [-system-prelinked-kernel]
+    sudo: true
+    vm_safe: true
+  - section: triage
+    name: KEXT cache (system caches)
+    description: Check system kext caches
+    command: kextcache
+    args: [-system-caches]
+    sudo: true
+    vm_safe: true
+  - section: triage
+    name: EFI integrity check
+    description: Check for modifications to critical system/firmware files
+    command: /usr/libexec/firmwarecheckers/eficheck/eficheck
+    args: [--integrity-check]
+    sudo: true
+    vm_safe: false
+    requires_hardware: true
+  - section: triage
+    name: LaunchDaemons
+    description: Quick check /Library/LaunchDaemons/
+    command: ls
+    args: [-la, /Library/LaunchDaemons/]
+    sudo: true
+    vm_safe: true
+  - section: triage
+    name: LaunchAgents (system)
+    description: Quick check /Library/LaunchAgents/
+    command: ls
+    args: [-la, /Library/LaunchAgents/]
+    sudo: true
+    vm_safe: true
+
+  # --- 2. Process & Memory ---
+  - section: processes
+    name: All processes (full)
+    description: List all running processes with full details
+    command: ps
+    args: [auxww]
+    sudo: false
+    vm_safe: true
+  - section: processes
+    name: High CPU processes
+    description: Processes using >50% CPU
+    script: ps aux | awk '$3 > 50 {print}'
+    sudo: false
+    vm_safe: true
+  - section: processes
+    name: High memory processes
+    description: Processes using >50% memory
+    script: ps aux | awk '$4 > 50 {print}'
+    sudo: false
+    vm_safe: true
+  - section: processes
+    name: Listening TCP
+    description: Processes with listening TCP ports
+    command: lsof
+    args: [-i, TCP, -s, TCP:LISTEN, -n, -P]
+    sudo: true
+    vm_safe: true
+  - section: processes
+    name: System launchctl DYLD
+    description: Check for dyld env vars (dylib injection) in system domain
+    script: launchctl print system | grep DYLD
+    sudo: true
+    vm_safe: true
+
+  # --- 3. Kernel & Rootkit ---
+  - section: kernel
+    name: Loaded KEXTs
+    description: List all loaded kernel extensions
+    command: kextstat
+    args: []
+    sudo: false
+    vm_safe: true
+  - section: kernel
+    name: Non-Apple KEXTs
+    description: Unsigned or suspicious kernel extensions
+    script: kextstat | grep -v "com.apple" | grep -v "com.intel"
+    sudo: false
+    vm_safe: true
+  - section: kernel
+    name: System extensions
+    description: Modern system extensions (replacement for KEXTs)
+    command: systemextensionsctl
+    args: [list]
+    sudo: false
+    vm_safe: true
+  - section: kernel
+    name: NVRAM boot-args
+    description: Check boot-args for suspicious modifications
+    command: nvram
+    args: [boot-args]
+    sudo: false
+    vm_safe: true
+  - section: kernel
+    name: EFI integrity
+    description: Firmware integrity check
+    command: /usr/libexec/firmwarecheckers/eficheck/eficheck
+    args: [--integrity-check]
+    sudo: true
+    vm_safe: false
+    requires_hardware: true
+
+  # --- 4. Persistence ---
+  - section: persistence
+    name: LaunchDaemons (full)
+    description: System-wide LaunchDaemons
+    command: ls
+    args: [-lah, /Library/LaunchDaemons/]
+    sudo: true
+    vm_safe: true
+  - section: persistence
+    name: System LaunchDaemons
+    description: /System/Library/LaunchDaemons/
+    command: ls
+    args: [-lah, /System/Library/LaunchDaemons/]
+    sudo: true
+    vm_safe: true
+  - section: persistence
+    name: LaunchAgents (user)
+    description: User LaunchAgents
+    script: ls -lah ~/Library/LaunchAgents/
+    sudo: false
+    vm_safe: true
+  - section: persistence
+    name: launchctl list (system)
+    description: Loaded system services
+    command: launchctl
+    args: [list]
+    sudo: true
+    vm_safe: true
+  - section: persistence
+    name: Login items
+    description: Per-user login items
+    command: osascript
+    args: [-e, 'tell application "System Events" to get the name of every login item']
+    sudo: false
+    vm_safe: true
+  - section: persistence
+    name: Cron tabs (user)
+    description: Current user crontab
+    command: crontab
+    args: [-l]
+    sudo: false
+    vm_safe: true
+  - section: persistence
+    name: Periodic daily
+    description: /etc/periodic/daily/
+    command: ls
+    args: [-la, /etc/periodic/daily/]
+    sudo: false
+    vm_safe: true
+
+  # --- 5. Network ---
+  - section: network
+    name: Listening TCP
+    description: All listening TCP ports
+    command: lsof
+    args: [-iTCP, -sTCP:LISTEN, -n, -P]
+    sudo: true
+    vm_safe: true
+  - section: network
+    name: Listening UDP
+    description: UDP listeners
+    command: lsof
+    args: [-iUDP, -n, -P]
+    sudo: true
+    vm_safe: true
+  - section: network
+    name: Firewall status
+    description: Application firewall global state
+    command: /usr/libexec/ApplicationFirewall/socketfilterfw
+    args: [--getglobalstate]
+    sudo: true
+    vm_safe: true
+  - section: network
+    name: DNS config
+    description: Current DNS configuration
+    command: scutil
+    args: [--dns]
+    sudo: false
+    vm_safe: true
+  - section: network
+    name: resolv.conf
+    description: /etc/resolv.conf
+    command: cat
+    args: [/etc/resolv.conf]
+    sudo: false
+    vm_safe: true
+
+  # --- 6. Security tools ---
+  - section: security-tools
+    name: Gatekeeper status
+    description: spctl status
+    command: spctl
+    args: [--status]
+    sudo: false
+    vm_safe: true
+  - section: security-tools
+    name: FileVault status
+    description: Disk encryption status
+    command: fdesetup
+    args: [status]
+    sudo: true
+    vm_safe: true
+  - section: security-tools
+    name: Repair packages verify
+    description: Verify system file integrity
+    command: /usr/libexec/repair_packages
+    args: [--verify, --standard-pkgs]
+    sudo: true
+    vm_safe: true
+
+  # --- 7. Advanced ---
+  - section: advanced
+    name: Endpoint security (launchctl)
+    description: Security-related launchd services
+    script: launchctl list | grep -i security
+    sudo: true
+    vm_safe: true
+  - section: advanced
+    name: System extensions list
+    description: Loaded system extensions
+    command: systemextensionsctl
+    args: [list]
+    sudo: false
+    vm_safe: true
+
+  # --- 9. Harden (preventive) ---
+  - section: harden
+    name: Software update list
+    description: Available updates
+    command: softwareupdate
+    args: [-l]
+    sudo: false
+    vm_safe: true
+  - section: harden
+    name: Firewall state
+    description: Current firewall state
+    command: /usr/libexec/ApplicationFirewall/socketfilterfw
+    args: [--getglobalstate]
+    sudo: true
+    vm_safe: true

@@ -1,0 +1,53 @@
+# Built binary
+mac-compass
+/mac-compass
+
+# Go
+/vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDE / editor (local settings; remove if you want to commit shared .vscode)
+.idea/
+.vscode/
+.cursor/
+.cursor*
+.specstory/
+*.sublime-*
+
+# Sensitive / env (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Local output and reports
+report.txt
+*.log
+/reports/
+/coverage.out
+/coverage.html
+
+# Cursor / SpecStory (local plans and history)
+.cursor/plans/
+.specstory/
+
+# Misc
+*.swp
+*~
+.cursorindexingignore
