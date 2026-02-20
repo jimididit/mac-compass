@@ -106,15 +106,23 @@ mac-compass triage --report ./my-report.txt
 - **Runner:** `internal/runner/`  -  runs shell commands from the catalog (with optional sudo, timeouts, capture).
 - **Commands:** `cmd/`  -  Cobra root and subcommands.
 
-**Build and test:**
+**Build:**
 
 ```bash
 go build .
-go test ./...
 # or
 make build
+```
+
+**Test:**
+
+```bash
+go test ./...
+# or
 make test
 ```
+
+Tests cover: catalog loading and filtering by section, runner (ExpandUserHome, SkipSudo/VMMode behavior, simple command and script execution), JSON output encoding, the interactive menu choice mapping, and CLI integration (e.g. `--help`, `version`, `checklist`, `refs`). Runner tests that execute real commands are skipped on non-Unix environments.
 
 The catalog is maintained from an external reference (not stored in this repo). When that reference changes, update `checks.yaml` and add or adjust checks as needed.
 
