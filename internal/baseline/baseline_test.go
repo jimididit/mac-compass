@@ -259,3 +259,23 @@ func TestCompare_NewAdminAndModifiedShellRC(t *testing.T) {
 		t.Errorf("modified rc must appear as a new hash line: %+v", f)
 	}
 }
+
+func TestBTMExtractor_RealRunnerOutput(t *testing.T) {
+	s := snap(output.HostInfo{}, fixture(t, "macos26-arm64", "persistence.btm"))
+	items := s.Checks["persistence.btm"].Items
+	if len(items) < 4 {
+		t.Fatalf("too few items: %v", items)
+	}
+	found := false
+	for _, it := range items {
+		if strings.HasPrefix(it, "developer |") {
+			t.Errorf("developer grouping leaked: %q", it)
+		}
+		if strings.HasPrefix(it, "legacy daemon | ankaupd.sh | ") && strings.HasSuffix(it, "| enabled") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("ankaupd.sh daemon missing: %v", items)
+	}
+}

@@ -1,0 +1,21 @@
+kTCCServiceAccessibility|/bin/bash|1
+kTCCServiceAccessibility|/opt/hca/hosted-compute-agent|1
+kTCCServiceAccessibility|/opt/hca/start_hca.sh|1
+kTCCServiceAccessibility|/usr/bin/osascript|1
+kTCCServiceAccessibility|/usr/libexec/sshd-keygen-wrapper|1
+kTCCServiceAccessibility|/usr/local/opt/runner/provisioner/provisioner|1
+kTCCServiceAccessibility|/usr/local/opt/runner/runprovisioner.sh|1
+kTCCServiceAccessibility|com.apple.Terminal|0
+kTCCServiceAccessibility|com.apple.dt.Xcode-Helper|0
+kTCCServicePostEvent|/Library/Application Support/Veertu/Anka/addons/ankarund|1
+kTCCServicePostEvent|/opt/hca/start_hca.sh|1
+kTCCServicePostEvent|/usr/local/opt/runner/runprovisioner.sh|1
+kTCCServiceScreenCapture|/bin/bash|1
+kTCCServiceScreenCapture|/opt/hca/hosted-compute-agent|1
+kTCCServiceScreenCapture|/usr/local/opt/runner/provisioner/provisioner|1
+kTCCServiceSystemPolicyAllFiles|/bin/bash|1
+kTCCServiceSystemPolicyAllFiles|/opt/hca/start_hca.sh|1
+kTCCServiceSystemPolicyAllFiles|/usr/local/opt/runner/runprovisioner.sh|1
+kTCCServiceSystemPolicyAllFiles|com.apple.Terminal|0
+kTCCServiceSystemPolicyAllFiles|com.microsoft.wdav|0
+kTCCServiceSystemPolicyAllFiles|com.microsoft.wdav.epsext|0

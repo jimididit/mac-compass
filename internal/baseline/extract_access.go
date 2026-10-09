@@ -1,15 +1,35 @@
 package baseline
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/jimididit/mac-compass/internal/btm"
 	"github.com/jimididit/mac-compass/internal/output"
 )
 
+// btmItems normalizes dumpbtm records to "type | name | location | enabled|disabled",
+// dropping UUIDs and generation counters, which are not stable.
+func btmItems(r output.CheckResult) []string {
+	var out []string
+	for _, it := range btm.Parse(r.Stdout) {
+		if it.Grouping() {
+			continue
+		}
+		state := "disabled"
+		if it.Enabled() {
+			state = "enabled"
+		}
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s", it.Type, it.DisplayName(), it.Where(), state))
+	}
+	return out
+}
+
 func init() {
 	for id, ex := range map[string]extractor{
+		"persistence.btm":                 {KindSet, btmItems},
 		"accounts.local-users":            {KindSet, localUsers},
 		"accounts.admin-group":            {KindSet, adminMembers},
 		"accounts.guest":                  {KindState, firstLine},
@@ -29,6 +49,7 @@ func init() {
 		extractors[id] = ex
 	}
 	for id, m := range map[string]meta{
+		"persistence.btm":                 {"Background item (login item, agent or daemon)", output.SeverityMedium, "Review System Settings > General > Login Items & Extensions"},
 		"accounts.local-users":            {"Local account", output.SeverityHigh, "Review with dscl . -list /Users; remove accounts you did not create"},
 		"accounts.admin-group":            {"Administrator account", output.SeverityHigh, "Review with dscl . -read /Groups/admin GroupMembership"},
 		"accounts.guest":                  {"Guest account setting", output.SeverityMedium, "System Settings > Users & Groups"},

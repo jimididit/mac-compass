@@ -302,7 +302,7 @@ checks:
     section: accounts
     name: SSH authorized keys
     description: Fingerprints of keys that can log in over SSH as this user
-    script: /usr/bin/ssh-keygen -lf ~/.ssh/authorized_keys 2>/dev/null
+    script: '[ -f ~/.ssh/authorized_keys ] && /usr/bin/ssh-keygen -lf ~/.ssh/authorized_keys'
     sudo: false
     vm_safe: true
     ok_exit: [1]
