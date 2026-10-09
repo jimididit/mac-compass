@@ -23,6 +23,18 @@ Checks adapt to the host: each catalog entry can declare `macos_min` / `macos_ma
 
 ## Install
 
+### From a release
+
+Download the universal binary (Apple Silicon and Intel) from the [Releases](https://github.com/jimididit/mac-compass/releases) page, then verify it before running anything as root:
+
+```bash
+shasum -a 256 -c checksums.txt --ignore-missing
+gh attestation verify mac-compass_*_macos_universal.tar.gz --repo jimididit/mac-compass   # build provenance
+tar -xzf mac-compass_*_macos_universal.tar.gz
+```
+
+Releases are not yet signed or notarized with an Apple Developer ID. If macOS blocks a browser-downloaded binary, clear the quarantine flag (`xattr -d com.apple.quarantine mac-compass`) only after you have verified the checksum.
+
 ### From source (Go 1.24+)
 
 ```bash

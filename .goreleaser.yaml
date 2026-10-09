@@ -1,0 +1,59 @@
+# GoReleaser config: builds macOS binaries from a v* tag. See RELEASING.md.
+version: 2
+
+project_name: mac-compass
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: mac-compass
+    main: .
+    binary: mac-compass
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin]
+    goarch: [arm64, amd64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/jimididit/mac-compass/cmd.version={{ .Version }}
+
+# One fat binary that runs natively on Apple Silicon and Intel.
+universal_binaries:
+  - id: universal
+    ids: [mac-compass]
+    replace: false
+    name_template: mac-compass
+
+archives:
+  - id: universal
+    ids: [universal]
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_macos_universal"
+    files: [LICENSE, README.md, SHARING.md]
+  - id: per-arch
+    ids: [mac-compass]
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_macos_{{ .Arch }}"
+    files: [LICENSE, README.md, SHARING.md]
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^Merge pull request"
+      - "^Merge branch"
+
+release:
+  github:
+    owner: jimididit
+    name: mac-compass
+  draft: true  # review the notes and assets, then publish by hand
+  prerelease: auto

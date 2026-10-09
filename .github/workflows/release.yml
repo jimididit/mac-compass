@@ -1,0 +1,71 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write       # create the (draft) release and upload assets
+  id-token: write       # sign build provenance
+  attestations: write   # publish build provenance
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # changelog needs history
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: attest build provenance
+        # Attestations need a public repo (or GitHub Enterprise Cloud); skip while this repo is private.
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/checksums.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-dist
+          path: |
+            dist/*.tar.gz
+            dist/checksums.txt
+
+  # The release is built on Linux; prove the macOS binaries really run on real Macs before anyone
+  # publishes the draft.
+  smoke:
+    needs: release
+    name: smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel, macos-26, macos-26-intel]
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-dist
+      - name: verify, extract and run the universal binary
+        run: |
+          shasum -a 256 -c checksums.txt --ignore-missing
+          mkdir x && tar -xzf mac-compass_*_macos_universal.tar.gz -C x
+          cd x
+          lipo -archs mac-compass
+          test -f SHARING.md
+          ./mac-compass version
+          ./mac-compass --help >/dev/null
+          sudo ./mac-compass run-all -y --vm --json > /tmp/run.json || true
+          jq -e '.schema_version == 1 and (.sections | length) > 0' /tmp/run.json
+          jq -r '.summary' /tmp/run.json
