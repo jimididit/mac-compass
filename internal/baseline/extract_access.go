@@ -8,6 +8,7 @@ import (
 
 	"github.com/jimididit/mac-compass/internal/btm"
 	"github.com/jimididit/mac-compass/internal/output"
+	"github.com/jimididit/mac-compass/internal/runner"
 )
 
 // btmItems normalizes dumpbtm records to "type | name | location | enabled|disabled",
@@ -30,6 +31,7 @@ func btmItems(r output.CheckResult) []string {
 func init() {
 	for id, ex := range map[string]extractor{
 		"persistence.btm":                 {KindSet, btmItems},
+		"persistence.launchd-targets":     {KindSet, launchTargets},
 		"accounts.local-users":            {KindSet, localUsers},
 		"accounts.admin-group":            {KindSet, adminMembers},
 		"accounts.guest":                  {KindState, firstLine},
@@ -49,6 +51,7 @@ func init() {
 		extractors[id] = ex
 	}
 	for id, m := range map[string]meta{
+		"persistence.launchd-targets":     {"Launch item program or signer", output.SeverityHigh, "A launch item that is new, or whose program or signer changed, deserves a close look: inspect the plist and verify the program with codesign -dvv"},
 		"persistence.btm":                 {"Background item (login item, agent or daemon)", output.SeverityMedium, "Review System Settings > General > Login Items & Extensions"},
 		"accounts.local-users":            {"Local account", output.SeverityHigh, "Review with dscl . -list /Users; remove accounts you did not create"},
 		"accounts.admin-group":            {"Administrator account", output.SeverityHigh, "Review with dscl . -read /Groups/admin GroupMembership"},
@@ -118,6 +121,20 @@ func proxyLines(r output.CheckResult) []string {
 		if proxyKey.MatchString(l) {
 			out = append(out, l)
 		}
+	}
+	return out
+}
+
+// launchTargets keeps the stable identity of each launch item: what it is, what it runs, and who
+// signed it. Notarization and flags are dropped; a changed signer or team still shows as a change.
+func launchTargets(r output.CheckResult) []string {
+	var out []string
+	for _, l := range nonEmptyLines(r.Stdout) {
+		c := strings.Split(l, "	")
+		if len(c) != 9 || l == runner.LaunchdHeader {
+			continue
+		}
+		out = append(out, strings.Join([]string{c[0], c[1], c[3], c[4], c[5]}, " | "))
 	}
 	return out
 }

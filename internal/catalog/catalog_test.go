@@ -219,3 +219,18 @@ func TestEmbeddedCatalog_AttackCoverage(t *testing.T) {
 		}
 	}
 }
+
+func TestParse_Builtin(t *testing.T) {
+	ok := "checks:\n  - {id: persistence.a, section: persistence, name: a, builtin: launchd-targets}\n"
+	if _, err := Parse([]byte(ok)); err != nil {
+		t.Errorf("valid builtin rejected: %v", err)
+	}
+	for name, y := range map[string]string{
+		"unknown builtin":   "checks:\n  - {id: persistence.a, section: persistence, name: a, builtin: nope}\n",
+		"builtin + command": "checks:\n  - {id: persistence.a, section: persistence, name: a, builtin: launchd-targets, command: /bin/ls}\n",
+	} {
+		if _, err := Parse([]byte(y)); err == nil {
+			t.Errorf("%s: expected validation error", name)
+		}
+	}
+}

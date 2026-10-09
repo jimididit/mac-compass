@@ -2,6 +2,7 @@ package baseline
 
 import (
 	"bytes"
+	"github.com/jimididit/mac-compass/internal/runner"
 	"os"
 	"path/filepath"
 	"strings"
@@ -308,4 +309,24 @@ func TestCompare_ImprovementIsInfoNotFailure(t *testing.T) {
 	r = Compare(good, bad)
 	find(t, r, "triage.sip", output.StatusFail)
 	find(t, r, "network.firewall", output.StatusFail)
+}
+
+func TestLaunchTargetsExtractorAndSignerChange(t *testing.T) {
+	hdr := runner.LaunchdHeader + "\n"
+	old := snap(output.HostInfo{}, res("persistence.launchd-targets", hdr+
+		"daemon\tcom.foo\t/Library/LaunchDaemons/f.plist\t/Library/Foo/foo\tdeveloper-id\tABCDE12345\tDeveloper ID Application: Foo (ABCDE12345)\tnotarized\trunatload\n"))
+	cur := snap(output.HostInfo{}, res("persistence.launchd-targets", hdr+
+		"daemon\tcom.foo\t/Library/LaunchDaemons/f.plist\t/Library/Foo/foo\tdeveloper-id\tFFFFF00000\tDeveloper ID Application: Other (FFFFF00000)\tdeveloper-id\trunatload,keepalive\n"))
+	if got := old.Checks["persistence.launchd-targets"].Items; len(got) != 1 || got[0] != "daemon | com.foo | /Library/Foo/foo | developer-id | ABCDE12345" {
+		t.Fatalf("items: %q", got)
+	}
+	r := Compare(old, cur)
+	if f := find(t, r, "persistence.launchd-targets", output.StatusFail); f.Severity != output.SeverityHigh || !strings.Contains(f.Detail, "+ daemon | com.foo | /Library/Foo/foo | developer-id | FFFFF00000") {
+		t.Errorf("a changed signing team must be a high finding: %+v", f)
+	}
+	same := snap(output.HostInfo{}, res("persistence.launchd-targets", hdr+
+		"daemon\tcom.foo\t/Library/LaunchDaemons/f.plist\t/Library/Foo/foo\tdeveloper-id\tABCDE12345\tDeveloper ID Application: Foo (ABCDE12345)\tdeveloper-id\t-\n"))
+	if r := Compare(old, same); len(r.Findings) != 0 {
+		t.Errorf("notarization and flag changes alone must not be reported: %+v", r.Findings)
+	}
 }

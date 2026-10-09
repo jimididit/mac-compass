@@ -84,6 +84,10 @@ func Run(ctx context.Context, ch catalog.Check, opts Options, out, errw io.Write
 		}
 	}
 
+	if ch.Builtin != "" {
+		return runBuiltin(ctx, ch, opts, out)
+	}
+
 	script := ch.Script
 	if script != "" {
 		var err error

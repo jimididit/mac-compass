@@ -4,6 +4,11 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+- Code-signing analysis of launch items: the program each LaunchDaemon and LaunchAgent runs, with its signature
+  and notarization state. Flags programs in temporary or hidden locations, unsigned or ad-hoc signed programs,
+  missing programs and inline scripts; `compare` reports new items and changes of signing team.
+
 ## [0.2.0] - 2026-10-09
 
 First public release.
