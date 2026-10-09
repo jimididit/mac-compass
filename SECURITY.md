@@ -23,6 +23,8 @@ Supported version: the latest release and `main`.
 - **A compromised Mac can lie.** Every check relies on the operating system and its tools. Malware with
   kernel or root access can falsify their output. A clean result is evidence, not proof. For a machine you
   strongly suspect, collect evidence from outside it (network logs, a forensic image) as well.
+  `mac-compass collect` preserves what the tool saw in a hashed bundle; record the bundle hash it prints
+  somewhere other than that Mac, or `verify` can only show the files match their own manifest.
 - Findings are heuristics. Third-party LaunchDaemons, TCC grants by path, a proxy and so on are often
   legitimate; the tool tells you what is there and why it matters, not that it is malicious.
 - Release binaries are not yet signed or notarized with an Apple Developer ID. Verify the checksum and the

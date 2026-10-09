@@ -164,18 +164,7 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 		sections = append(sections, output.SectionResult{Section: id, Checks: executeSection(ctx, id, checks, opts, !jsonOutput)})
 	}
 
-	host, _ := os.Hostname()
-	rep := output.Report{
-		SchemaVersion: output.SchemaVersion,
-		Tool:          output.ToolInfo{Name: "mac-compass", Version: version},
-		Host:          output.HostInfo{Hostname: host, OS: runtime.GOOS, MacOSVersion: sys.Version, MacOSBuild: sys.Build, Arch: runner.HostArch()},
-		StartedAt:     started.UTC(),
-		DurationMS:    time.Since(started).Milliseconds(),
-		SudoEnabled:   !noSudo,
-		VMMode:        vmMode,
-		Sections:      sections,
-		Findings:      findings.Evaluate(sections),
-	}
+	rep := buildReport(sections, sys, started)
 	if err := applySuppressions(&rep); err != nil {
 		return err
 	}
@@ -190,6 +179,22 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 		writeFindings(opts.OutWriter, rep)
 	}
 	return exitError(cmd, rep, threshold)
+}
+
+// buildReport assembles the report for a finished run, with findings evaluated.
+func buildReport(sections []output.SectionResult, sys runner.MacOSInfo, started time.Time) output.Report {
+	host, _ := os.Hostname()
+	return output.Report{
+		SchemaVersion: output.SchemaVersion,
+		Tool:          output.ToolInfo{Name: "mac-compass", Version: version},
+		Host:          output.HostInfo{Hostname: host, OS: runtime.GOOS, MacOSVersion: sys.Version, MacOSBuild: sys.Build, Arch: runner.HostArch()},
+		StartedAt:     started.UTC(),
+		DurationMS:    time.Since(started).Milliseconds(),
+		SudoEnabled:   !noSudo,
+		VMMode:        vmMode,
+		Sections:      sections,
+		Findings:      findings.Evaluate(sections),
+	}
 }
 
 // exitError maps a finished report to the process outcome.
