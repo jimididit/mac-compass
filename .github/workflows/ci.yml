@@ -67,6 +67,20 @@ jobs:
           sudo chown "$(id -un)" out/snap-a.json out/snap-b.json
           # The planted LaunchAgent must be reported as new; this proves snapshot+compare end to end.
           jq -e '.findings[] | select(.id=="persistence.launchagents-user" and .status=="fail" and (.detail|contains("com.example.compass-ci-test.plist")))' out/compare-planted.json
+      - name: evidence bundle (collect, verify, tamper)
+        run: |
+          set -e
+          sudo ./mac-compass collect --vm -o out/evidence | tee out/collect.txt
+          HASH=$(awk '/bundle SHA-256/ {print $3}' out/collect.txt)
+          test ${#HASH} -eq 64
+          sudo chown -R "$(id -un)" out/evidence
+          ./mac-compass verify out/evidence --expect "$HASH"
+          # A single changed byte must be caught.
+          echo tamper >> out/evidence/findings.txt
+          if ./mac-compass verify out/evidence --expect "$HASH"; then echo "tampering went undetected"; exit 1; fi
+          # Put the file back for the artifact.
+          sed -i.bak '$ d' out/evidence/findings.txt && rm out/evidence/findings.txt.bak
+          ./mac-compass verify out/evidence --expect "$HASH"
       - name: summary
         if: always()
         run: |

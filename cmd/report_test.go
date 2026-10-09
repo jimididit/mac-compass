@@ -3,10 +3,14 @@ package cmd
 import (
 	"bytes"
 	"errors"
+	"github.com/jimididit/mac-compass/internal/baseline"
+	"github.com/jimididit/mac-compass/internal/evidence"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jimididit/mac-compass/internal/output"
 	"github.com/spf13/cobra"
@@ -119,5 +123,68 @@ func TestApplySuppressions(t *testing.T) {
 	suppressFile = filepath.Join(dir, "missing.yaml")
 	if err := applySuppressions(&rep); err == nil {
 		t.Error("a missing suppressions file must be an error, not silently ignored")
+	}
+}
+
+func runCmd(t *testing.T, args ...string) (string, error) {
+	t.Helper()
+	var out bytes.Buffer
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+	_ = rootCmd.Flags().Set("help", "false")
+	rootCmd.SetArgs(args)
+	err := rootCmd.Execute()
+	return out.String(), err
+}
+
+func TestVerifyCommand(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "bundle")
+	rep := output.Report{
+		SchemaVersion: output.SchemaVersion,
+		Tool:          output.ToolInfo{Name: "mac-compass", Version: "test"},
+		Host:          output.HostInfo{Hostname: "host", Arch: "arm64", MacOSVersion: "26.0"},
+		Sections: []output.SectionResult{{Section: "triage", Checks: []output.CheckResult{
+			{ID: "triage.sip", Section: "triage", Name: "SIP", Ok: true, Stdout: "enabled\n"}}}},
+	}
+	snap := baseline.FromSections(rep.Tool, rep.Host, true, time.Unix(0, 0), rep.Sections)
+	_, hash, err := evidence.Write(dir, evidence.Input{Report: rep, Snapshot: snap, FindingsText: "No findings.\n"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { verifyExpect = "" }()
+
+	out, err := runCmd(t, "verify", dir, "--expect", hash)
+	if err != nil || !strings.Contains(out, "OK: every file matches") || !strings.Contains(out, "matches the value you recorded") {
+		t.Fatalf("intact bundle: %v\n%s", err, out)
+	}
+	out, err = runCmd(t, "verify", dir, "--expect", strings.Repeat("0", 64))
+	if err == nil || !strings.Contains(out, "does not match the one you recorded") {
+		t.Errorf("a wrong recorded hash must fail: %v\n%s", err, out)
+	}
+	verifyExpect = ""
+	out, err = runCmd(t, "verify", dir)
+	if err != nil || !strings.Contains(out, "proves the files match the manifest, not that the manifest is the original") {
+		t.Errorf("without --expect the limit must be stated: %v\n%s", err, out)
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, "raw", "triage.sip.txt"), []byte("edited"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out, err = runCmd(t, "verify", dir)
+	if err == nil || !strings.Contains(out, "CHANGED: raw/triage.sip.txt") {
+		t.Errorf("tampering must be reported: %v\n%s", err, out)
+	}
+	if _, err := runCmd(t, "verify", filepath.Join(t.TempDir(), "nothing")); err == nil {
+		t.Error("a folder that is not a bundle must be an error")
+	}
+}
+
+func TestCollectNeedsMacOS(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("collect runs for real on macOS")
+	}
+	t.Setenv("MAC_COMPASS_ALLOW_NON_DARWIN", "")
+	if _, err := runCmd(t, "collect", "-o", filepath.Join(t.TempDir(), "b")); err == nil {
+		t.Error("collect must refuse to run off macOS")
 	}
 }

@@ -5,6 +5,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
+- `collect` writes a hashed evidence bundle (report, snapshot, findings and the raw output of every check, with a
+  SHA-256 manifest) and `verify` checks one later, optionally against a hash recorded off the machine.
 - Code-signing analysis of running programs: each distinct program currently running, with its signature and
   notarization state. Flags programs started from temporary or hidden locations, root processes run from a
   user's home folder, programs deleted while still running, and unsigned programs.

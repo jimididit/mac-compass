@@ -10,6 +10,8 @@
 | `mac-compass processes` · `kernel` · `persistence` · `network` · `security-tools` · `advanced` · `harden` · `accounts` | One section at a time |
 | `mac-compass snapshot` | Record a baseline ([details](baseline.md)) |
 | `mac-compass compare BASELINE [CURRENT]` | Show what changed since a baseline ([details](baseline.md)) |
+| `mac-compass collect` | Run everything and save a hashed evidence bundle ([details](#evidence-bundles)) |
+| `mac-compass verify FOLDER` | Check an evidence bundle against its manifest |
 | `mac-compass checklist` | Incident-response checklist (runs nothing) |
 | `mac-compass refs` | Links to further reading (runs nothing) |
 | `mac-compass version` | Print the version |
@@ -60,6 +62,34 @@ you have reviewed.
   "summary":  { "pass": 12, "fail": 6, "info": 2, "error": 0, "highest_severity": "high" }
 }
 ```
+
+## Evidence bundles
+
+`mac-compass collect` runs every check once and writes a folder you can keep or hand to someone else:
+
+```text
+mac-compass-evidence-20261009T151500Z/
+  report.json       the full report: every check's raw result, findings, summary
+  snapshot.json     the baseline snapshot, ready for `compare`
+  findings.txt      the findings as printed in the terminal
+  raw/<check-id>.txt  stdout, stderr, exit code and timing of each check
+  MANIFEST.json     SHA-256 and size of every file above
+  MANIFEST.sha256   the SHA-256 of MANIFEST.json (the "bundle hash")
+```
+
+The folder is created with mode `0700` and refuses to write into a folder that already has files.
+It prints the **bundle hash**. Record it somewhere other than the Mac you examined, then check the bundle any
+time:
+
+```bash
+sudo mac-compass collect -o /Volumes/Evidence/laptop-2026-10-09      # an external drive is best
+mac-compass verify /Volumes/Evidence/laptop-2026-10-09 --expect <the hash you recorded>
+```
+
+`verify` re-hashes every file and reports changed, missing and unlisted files. Without `--expect` it only
+proves the files match the manifest; someone able to edit a file could also have rewritten the manifest. The
+hash you recorded elsewhere is what closes that gap. Use `--redact` to mask the host and user name inside the
+bundle, and `--suppress` to move reviewed findings out of the active list.
 
 ## Exit status
 
