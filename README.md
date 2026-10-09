@@ -3,8 +3,21 @@
 **mac-compass** is an interactive CLI that helps you check a macOS system for signs of compromise. It runs a catalog of security and triage checks - SIP, Gatekeeper, kernel extensions, persistence locations, network state, and more - so you can quickly see what’s on the system without memorizing commands.
 
 - **Repository:** [github.com/jimididit/mac-compass](https://github.com/jimididit/mac-compass)
-- **Platform:** macOS only (tested on Sequoia)
+- **Platform:** macOS only. See [Supported macOS versions](#supported-macos-versions).
 - **Requirements:** Many checks need `sudo`; run with an admin account when you want full results.
+
+---
+
+## Supported macOS versions
+
+| macOS | Status |
+|-------|--------|
+| 26 (Tahoe), 15 (Sequoia) | Tested in CI on real runners, Apple Silicon and Intel |
+| 27 (Golden Gate) | Expected to work; not in CI until GitHub ships a macOS 27 runner image |
+| 12-14 | Best effort, not in CI (GitHub's macOS 14 runners are deprecated) |
+| 11 and older | Unsupported (minimum for the Go toolchain is macOS 11; older lacks `kmutil`) |
+
+Checks adapt to the host: each catalog entry can declare `macos_min` / `macos_max`, `arch`, and `optional`, and is *skipped* (not failed) when it does not apply. If the macOS version cannot be detected, nothing is hidden.
 
 ---
 

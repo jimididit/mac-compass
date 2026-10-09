@@ -12,48 +12,67 @@ jobs:
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # macos-26 = Tahoe arm64, macos-26-intel = Tahoe x86_64, macos-15* = Sequoia.
+        # macOS 14 runners are deprecated by GitHub; macOS 27 has no hosted image yet.
+        os: [ubuntu-latest, macos-15, macos-15-intel, macos-26, macos-26-intel]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
       - run: go vet ./...
       - run: go test -race ./...
 
   macos-run:
-    name: real macOS run (arm64 runner)
-    runs-on: macos-latest
+    name: real macOS run (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     needs: test
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel, macos-26, macos-26-intel]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
       - run: go build -o mac-compass .
-      - name: run-all (JSON, VM mode)
-        # Failing checks are data, not CI failures; the artifact is the point.
+      - name: collect
+        # Failing checks are data, not CI failures; the artifacts and summary are the point.
         run: |
-          sw_vers | tee sw_vers.txt
-          uname -m | tee uname.txt
-          sudo ./mac-compass run-all -y --vm --json > run-all.json || echo "exit=$?"
-          test -s run-all.json
-      - uses: actions/upload-artifact@v4
+          mkdir out
+          sw_vers | tee out/sw_vers.txt
+          uname -m | tee out/uname.txt
+          sudo ./mac-compass run-all -y --vm --json > out/run-all.json; echo "run-all exit=$?" | tee -a out/exit.txt
+          # Unprivileged pass: proves checks marked sudo:false really work as a normal user.
+          ./mac-compass run-all -y --vm --no-sudo --json > out/run-all-nosudo.json; echo "nosudo exit=$?" | tee -a out/exit.txt
+          test -s out/run-all.json && test -s out/run-all-nosudo.json
+      - name: summary
+        run: |
+          {
+            echo "### $(sw_vers -productName) $(sw_vers -productVersion) ($(uname -m)) on ${{ matrix.os }}"
+            for f in run-all run-all-nosudo; do
+              echo "**$f**: $(jq '[.[].checks[]] | "\(map(select(.ok)) | length) ok, \(map(select(.skipped)) | length) skipped, \(map(select((.ok|not) and (.skipped|not))) | length) failed"' -r out/$f.json)"
+              jq -r '.[].checks[] | select((.ok|not) and (.skipped|not)) | "- FAIL \(.section)/\(.name): \(.error) \(.stderr|gsub("\n";" ")|.[0:120])"' out/$f.json
+            done
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
         with:
-          name: macos-run-all
-          path: |
-            run-all.json
-            sw_vers.txt
-            uname.txt
+          name: macos-run-${{ matrix.os }}
+          path: out/
 
   vuln:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          # govulncheck@latest needs a newer Go than go.mod; setup-go v7 pins GOTOOLCHAIN=local.
+          go-version: stable
       - run: go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...

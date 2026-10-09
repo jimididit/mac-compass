@@ -241,3 +241,61 @@ func TestExpandUserHome_OnlyWordLeading(t *testing.T) {
 		t.Errorf("got  %q\nwant %q", got, want)
 	}
 }
+
+func TestRun_ArchGate(t *testing.T) {
+	other := "arm64"
+	if hostArch() == "arm64" {
+		other = "x86_64"
+	}
+	ch := catalog.Check{Section: "test", Name: "arch", Command: "/nonexistent/x", Arch: other}
+	res := Run(context.Background(), ch, DefaultOptions(), nil, nil)
+	if !res.Skipped || res.Err != nil {
+		t.Fatalf("want skipped without error; got %+v", res)
+	}
+	ch.Arch = hostArch()
+	if res := Run(context.Background(), ch, DefaultOptions(), nil, nil); res.Skipped {
+		t.Fatal("matching arch must not be skipped")
+	}
+}
+
+func TestRun_OptionalMissingBinarySkipped(t *testing.T) {
+	ch := catalog.Check{Section: "test", Name: "opt", Command: "/nonexistent/binary/xyz", Optional: true}
+	res := Run(context.Background(), ch, DefaultOptions(), nil, nil)
+	if !res.Skipped || res.Err != nil {
+		t.Fatalf("want skipped without error; got %+v", res)
+	}
+	ch.Optional = false
+	if res := Run(context.Background(), ch, DefaultOptions(), nil, nil); res.Err == nil {
+		t.Fatal("non-optional missing binary must fail")
+	}
+}
+
+func TestParseMajor(t *testing.T) {
+	cases := map[string]int{"26.6.2": 26, "27.0\n": 27, "15.7": 15, "10.15.7": 10, "11": 11, "": 0, "abc": 0, "-3.1": 0}
+	for in, want := range cases {
+		if got := ParseMajor(in); got != want {
+			t.Errorf("ParseMajor(%q) = %d; want %d", in, got, want)
+		}
+	}
+}
+
+func TestRun_MacOSVersionGate(t *testing.T) {
+	ch := catalog.Check{Section: "test", Name: "v", Command: "/nonexistent/x", MacOSMin: 12, MacOSMax: 26}
+	opts := DefaultOptions()
+	for _, v := range []int{11, 27} {
+		opts.MacOSMajor = v
+		if res := Run(context.Background(), ch, opts, nil, nil); !res.Skipped || res.Err != nil {
+			t.Errorf("macOS %d: want skipped; got %+v", v, res)
+		}
+	}
+	for _, v := range []int{12, 26} {
+		opts.MacOSMajor = v
+		if res := Run(context.Background(), ch, opts, nil, nil); res.Skipped {
+			t.Errorf("macOS %d: must not be skipped", v)
+		}
+	}
+	opts.MacOSMajor = 0 // unknown: never hide checks
+	if res := Run(context.Background(), ch, opts, nil, nil); res.Skipped {
+		t.Error("unknown version must not skip")
+	}
+}
