@@ -22,7 +22,7 @@ First public release.
 - macOS version, CPU architecture and optional-binary gating in the catalog; stable check ids.
 - CI on real macOS 15 and 26 (Apple Silicon and Intel), `staticcheck`, `govulncheck`; GoReleaser pipeline
   producing a universal binary, checksums and a build provenance attestation.
-- Documentation: usage, baselines, check reference, `SHARING.md`, `SECURITY.md`, `CONTRIBUTING.md`.
+- Documentation: usage, baselines, check reference, `SECURITY.md`, `CONTRIBUTING.md`.
 
 ### Changed
 - Checks run by absolute path with a scrubbed environment; timeouts kill the whole process group.

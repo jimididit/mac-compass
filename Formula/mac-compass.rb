@@ -1,6 +1,6 @@
 # Homebrew formula for mac-compass
 # Install: brew tap jimididit/tap && brew install mac-compass
-# Update url and sha256 for each release (see RELEASING.md).
+# Update url and sha256 for each release.
 
 class MacCompass < Formula
   desc "Interactive CLI for macOS compromise detection"

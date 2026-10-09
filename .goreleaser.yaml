@@ -1,4 +1,4 @@
-# GoReleaser config: builds macOS binaries from a v* tag. See RELEASING.md.
+# GoReleaser config: builds macOS binaries from a v* tag.
 version: 2
 
 project_name: mac-compass
@@ -32,12 +32,12 @@ archives:
     ids: [universal]
     formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_macos_universal"
-    files: [LICENSE, README.md, SHARING.md]
+    files: [LICENSE, README.md]
   - id: per-arch
     ids: [mac-compass]
     formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_macos_{{ .Arch }}"
-    files: [LICENSE, README.md, SHARING.md]
+    files: [LICENSE, README.md]
 
 checksum:
   name_template: checksums.txt

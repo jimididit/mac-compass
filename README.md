@@ -5,6 +5,7 @@
 **Triage, baseline and audit a Mac from the command line.**
 Read-only checks for signs of compromise and weak security settings, explained in plain language.
 
+[![Release](https://img.shields.io/github/v/release/jimididit/mac-compass)](https://github.com/jimididit/mac-compass/releases/latest)
 [![CI](https://github.com/jimididit/mac-compass/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jimididit/mac-compass/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/jimididit/mac-compass)](LICENSE)
 [![Go version](https://img.shields.io/github/go-mod/go-version/jimididit/mac-compass)](go.mod)
@@ -48,7 +49,6 @@ gh attestation verify mac-compass_*_macos_universal.tar.gz --repo jimididit/mac-
 ```
 
 If macOS reports `zsh: killed`, sign it locally: `codesign --force --sign - ./mac-compass`.
-A step-by-step guide for someone you are sending it to is in [SHARING.md](SHARING.md).
 
 </details>
 
@@ -96,8 +96,7 @@ machine compares clean. Accept things you have reviewed with `--suppress`. See [
 | [Usage reference](docs/usage.md) | Commands, flags, reading results, JSON report, exit codes |
 | [Baselines and suppressions](docs/baseline.md) | `snapshot`, `compare`, accepting reviewed findings |
 | [Check reference](docs/checks.md) | All 46 checks, what they flag, and their MITRE ATT&CK mapping |
-| [Sharing it with someone](SHARING.md) | Plain instructions to hand to a non-expert |
-| [Contributing](CONTRIBUTING.md) · [Releasing](RELEASING.md) · [Changelog](CHANGELOG.md) | For maintainers |
+| [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md) | For contributors |
 
 ## Supported macOS versions
 
