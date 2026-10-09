@@ -94,6 +94,7 @@ func executeSection(ctx context.Context, sectionID string, checks []catalog.Chec
 			ID:         ch.ID,
 			Section:    sectionID,
 			Name:       ch.Name,
+			Attack:     ch.Attack,
 			Ok:         res.Err == nil && !res.Skipped,
 			Skipped:    res.Skipped,
 			SkipReason: res.SkipReason,

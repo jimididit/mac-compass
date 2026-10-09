@@ -190,3 +190,32 @@ func TestValidate_IDs(t *testing.T) {
 		}
 	}
 }
+
+func TestParse_BadAttackID(t *testing.T) {
+	for _, bad := range []string{"1543", "T15", "T1543.4", "t1543"} {
+		y := "checks:\n  - {id: triage.a, section: triage, name: a, command: /bin/true, attack: [" + bad + "]}\n"
+		if _, err := Parse([]byte(y)); err == nil {
+			t.Errorf("attack id %q should be rejected", bad)
+		}
+	}
+	if _, err := Parse([]byte("checks:\n  - {id: triage.a, section: triage, name: a, command: /bin/true, attack: [T1543, T1543.004]}\n")); err != nil {
+		t.Errorf("valid ids rejected: %v", err)
+	}
+}
+
+// Persistence and tampering checks should say which ATT&CK techniques they cover.
+func TestEmbeddedCatalog_AttackCoverage(t *testing.T) {
+	cat, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	have := map[string][]string{}
+	for _, ch := range cat.Checks {
+		have[ch.ID] = ch.Attack
+	}
+	for _, id := range []string{"triage.launchdaemons", "persistence.crontab", "persistence.shell-rc", "persistence.login-hooks", "persistence.sudoers-d", "accounts.ssh-authorized-keys", "processes.launchctl-dyld", "security-tools.tcc-system"} {
+		if len(have[id]) == 0 {
+			t.Errorf("%s has no ATT&CK mapping", id)
+		}
+	}
+}

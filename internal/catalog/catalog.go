@@ -16,6 +16,8 @@ var catalogFS embed.FS
 
 var idRe = regexp.MustCompile(`^[a-z0-9-]+\.[a-z0-9-]+$`)
 
+var attackRe = regexp.MustCompile(`^T\d{4}(\.\d{3})?$`)
+
 // KnownSections lists the section ids a check may use.
 var KnownSections = []string{
 	"triage", "processes", "kernel", "persistence",
@@ -32,7 +34,6 @@ type Check struct {
 	Args             []string `yaml:"args"`
 	Script           string   `yaml:"script"` // If set, run with sh -c (for pipes etc.)
 	Sudo             bool     `yaml:"sudo"`
-	VMSafe           bool     `yaml:"vm_safe"`           // Safe to run in VM
 	RequiresHardware bool     `yaml:"requires_hardware"` // T2/Secure Enclave etc.
 	// Arch limits the check to one CPU architecture: "x86_64" or "arm64". Empty means any.
 	Arch string `yaml:"arch"`
@@ -43,6 +44,8 @@ type Check struct {
 	// Optional marks a check whose binary may be absent on some macOS versions;
 	// a missing binary is reported as skipped, not failed.
 	Optional bool `yaml:"optional"`
+	// Attack lists MITRE ATT&CK technique ids (e.g. "T1543.004") this check helps detect.
+	Attack []string `yaml:"attack"`
 	// OKExit lists exit codes (besides 0) that mean the check ran fine, e.g. 1 for
 	// "grep found nothing" or "crontab: no crontab for user".
 	OKExit []int `yaml:"ok_exit"`
@@ -134,6 +137,11 @@ func (c *Catalog) Validate() error {
 			errs = append(errs, fmt.Errorf("%s: duplicate id %q", where, ch.ID))
 		}
 		ids[ch.ID] = true
+		for _, t := range ch.Attack {
+			if !attackRe.MatchString(t) {
+				errs = append(errs, fmt.Errorf("%s: attack id %q must look like T1543 or T1543.004", where, t))
+			}
+		}
 		key := ch.Section + "/" + ch.Name
 		if seen[key] {
 			errs = append(errs, fmt.Errorf("%s: duplicate name in section %q", where, ch.Section))

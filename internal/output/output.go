@@ -56,21 +56,23 @@ type Finding struct {
 	Title       string   `json:"title"`
 	Detail      string   `json:"detail,omitempty"`
 	Remediation string   `json:"remediation,omitempty"`
+	Attack      []string `json:"attack,omitempty"` // MITRE ATT&CK technique ids
 }
 
 // CheckResult is the result of running a single check.
 type CheckResult struct {
-	ID         string `json:"id"`
-	Section    string `json:"section"`
-	Name       string `json:"name"`
-	Ok         bool   `json:"ok"`
-	Skipped    bool   `json:"skipped,omitempty"`
-	SkipReason string `json:"skip_reason,omitempty"`
-	ExitCode   int    `json:"exit_code"`
-	DurationMS int64  `json:"duration_ms"`
-	Stdout     string `json:"stdout,omitempty"`
-	Stderr     string `json:"stderr,omitempty"`
-	Error      string `json:"error,omitempty"`
+	ID         string   `json:"id"`
+	Section    string   `json:"section"`
+	Name       string   `json:"name"`
+	Attack     []string `json:"attack,omitempty"`
+	Ok         bool     `json:"ok"`
+	Skipped    bool     `json:"skipped,omitempty"`
+	SkipReason string   `json:"skip_reason,omitempty"`
+	ExitCode   int      `json:"exit_code"`
+	DurationMS int64    `json:"duration_ms"`
+	Stdout     string   `json:"stdout,omitempty"`
+	Stderr     string   `json:"stderr,omitempty"`
+	Error      string   `json:"error,omitempty"`
 }
 
 // SectionResult holds all check results for a section.

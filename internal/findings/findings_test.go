@@ -167,3 +167,16 @@ func TestSortedMostSevereFirst(t *testing.T) {
 		t.Errorf("order = %v; want %s", got, want)
 	}
 }
+
+func TestFindingsCarryAttackIDs(t *testing.T) {
+	r := res("triage.sip", "System Integrity Protection status: disabled.")
+	r.Attack = []string{"T1562.001"}
+	f := one(t, eval(t, r))
+	if len(f.Attack) != 1 || f.Attack[0] != "T1562.001" {
+		t.Errorf("attack ids not propagated: %+v", f)
+	}
+	failed := output.CheckResult{ID: "triage.sip", Name: "SIP", Ok: false, Error: "boom", Attack: []string{"T1562.001"}}
+	if f := one(t, eval(t, failed)); len(f.Attack) != 1 {
+		t.Errorf("error findings keep ATT&CK ids too: %+v", f)
+	}
+}
