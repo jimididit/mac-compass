@@ -22,6 +22,7 @@ var (
 	reportPath   string
 	failOn       string
 	redactOutput bool
+	suppressFile string
 )
 
 var rootCmd = &cobra.Command{
@@ -39,6 +40,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&reportPath, "report", "", "Also write human-readable output to file")
 	rootCmd.PersistentFlags().StringVar(&failOn, "fail-on", "", "Exit 2 if any finding is at or above this severity (info|low|medium|high|critical)")
 	rootCmd.PersistentFlags().BoolVar(&redactOutput, "redact", false, "Mask the host name and your user name in output, reports and snapshots")
+	rootCmd.PersistentFlags().StringVar(&suppressFile, "suppress", "", "YAML file of reviewed findings to accept (id, optional match, reason, optional expires)")
 	rootCmd.CompletionOptions.DisableDefaultCmd = false
 	rootCmd.SilenceErrors = true // Execute prints the error once
 	addStubCommands()

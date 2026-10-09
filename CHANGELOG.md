@@ -5,6 +5,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
+- `--suppress <file>`: accept reviewed findings with a recorded reason, optional per-item `match` and
+  `expires`; accepted findings stay visible in the report.
 - MITRE ATT&CK technique ids on persistence, tampering and access checks,
   carried through to findings in the JSON report.
 - `CONTRIBUTING.md`, this changelog, and a `staticcheck` job in CI.

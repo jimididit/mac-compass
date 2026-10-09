@@ -93,6 +93,10 @@ func (r Redactor) Report(rep *output.Report) {
 		f := &rep.Findings[i]
 		f.Title, f.Detail, f.Remediation = r.String(f.Title), r.String(f.Detail), r.String(f.Remediation)
 	}
+	for i := range rep.Suppressed {
+		f := &rep.Suppressed[i]
+		f.Title, f.Detail, f.Remediation, f.Reason = r.String(f.Title), r.String(f.Detail), r.String(f.Remediation), r.String(f.Reason)
+	}
 }
 
 // Snapshot redacts a snapshot in place. Redact both sides of a comparison or neither.

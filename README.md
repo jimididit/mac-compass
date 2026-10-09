@@ -126,6 +126,22 @@ sudo mac-compass compare baseline.json --fail-on medium
 
 A snapshot is a normalized inventory: LaunchDaemons/Agents, login items, crontab, kernel and system extensions, TCP/UDP listeners, DNS servers, and security settings (SIP, Gatekeeper, firewall, FileVault, boot-args, update switches). Volatile details (pids, timestamps, sizes) are stripped. Additions are findings, removals are informational, and a changed setting is a finding. A setting that moves to its secure value (for example SIP turned back on) is reported as an improvement, not a failure. A different macOS version, host name or sudo setting between snapshots is reported so Apple's own post-update changes are not mistaken for tampering. Snapshot files are written with mode `0600`.
 
+### Accepting reviewed findings
+
+Once you have looked into a finding and decided it is fine, record that instead of seeing it every run. Copy
+`suppressions.example.yaml`, edit it, and pass it with `--suppress` (works with `run-all`, the section
+commands and `compare`):
+
+```bash
+sudo mac-compass run-all -y --suppress suppressions.yaml
+```
+
+Each rule needs the finding `id` (the check id shown in the JSON report) and a `reason`. Add `match` to accept
+only detail lines containing that text, so one reviewed item is accepted while anything new in the same
+finding still shows. Add `expires` (YYYY-MM-DD) to force a re-review. Accepted findings are removed from the
+results and from `--fail-on`, but they are listed in the output and in the JSON `suppressed` array with your
+reason. An expired rule is ignored and reported.
+
 ### Exit status and safety
 
 - Exit `0`: every check ran (skipped checks do not count as failures) and no `--fail-on` threshold was met. Exit `1`: at least one check failed or timed out. Exit `2`: a finding met `--fail-on`.

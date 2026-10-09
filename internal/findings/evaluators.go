@@ -266,7 +266,8 @@ func evalThirdPartyPlists(label, fix string) evaluator {
 		if len(third) == 0 {
 			return []output.Finding{pass(r.ID, "No third-party items in "+label)}
 		}
-		return []output.Finding{info(r.ID, fmt.Sprintf("%d third-party item(s) in %s", len(third), label),
-			strings.Join(third, "\n")+"\n"+fix)}
+		f := info(r.ID, fmt.Sprintf("%d third-party item(s) in %s", len(third), label), strings.Join(third, "\n"))
+		f.Remediation = fix
+		return []output.Finding{f}
 	}
 }
