@@ -25,6 +25,7 @@ var (
 	suppressFile string
 	htmlPath     string
 	sarifPath    string
+	progress     bool
 )
 
 var rootCmd = &cobra.Command{
@@ -45,8 +46,12 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&suppressFile, "suppress", "", "YAML file of reviewed findings to accept (id, optional match, reason, optional expires)")
 	rootCmd.PersistentFlags().StringVar(&htmlPath, "html", "", "Also write a self-contained HTML report to this file (mode 0600)")
 	rootCmd.PersistentFlags().StringVar(&sarifPath, "sarif", "", "Also write a SARIF 2.1.0 report to this file (mode 0600)")
+	rootCmd.PersistentFlags().BoolVar(&progress, "progress", false, "Print one line per check to stderr as it finishes (useful on slow machines and in CI logs)")
 	rootCmd.CompletionOptions.DisableDefaultCmd = false
 	rootCmd.SilenceErrors = true // Execute prints the error once
+	// Arguments and flags are validated before this runs, so usage is still shown for those mistakes but
+	// not for runtime failures such as an unreadable file.
+	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) { cmd.SilenceUsage = true }
 	addStubCommands()
 }
 

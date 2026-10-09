@@ -135,6 +135,9 @@ var monitorRunCmd = &cobra.Command{
 		if st.LastResult == "baselined" {
 			fmt.Fprintln(w, "  baseline recorded; later runs report what changed")
 		}
+		if st.LastResult == "alert-active" {
+			fmt.Fprintln(w, "  findings from an earlier alert are still present; no new alert")
+		}
 		if res.Alerted {
 			fmt.Fprintf(w, "  ALERT: %s\n  %s\n", res.Title, res.Body)
 			for _, f := range res.Findings {
@@ -346,6 +349,9 @@ var monitorStatusCmd = &cobra.Command{
 		fmt.Fprintf(w, "baseline:   taken %s\n", st.BaselineTaken.Format(time.RFC3339))
 		if !st.LastAlert.IsZero() {
 			fmt.Fprintf(w, "last alert: %s\n", st.LastAlert.Format(time.RFC3339))
+			if scope == monitor.ScopeUser {
+				fmt.Fprintln(w, "            (no banner? macOS attributes these to Script Editor: allow it in System Settings > Notifications, and check Focus is off)")
+			}
 		}
 		if st.LastError != "" {
 			fmt.Fprintf(w, "last error: %s\n", st.LastError)

@@ -207,7 +207,8 @@ var updateRecommended = regexp.MustCompile(`Title: ([^,]+), Version: ([^,]+),.*R
 func evalSoftwareUpdate(r output.CheckResult) []output.Finding {
 	labels := updateLabel.FindAllStringSubmatch(r.Stdout, -1)
 	if len(labels) == 0 {
-		if strings.Contains(r.Stdout, "No new software available") {
+		// softwareupdate prints "No new software available." to stderr on some macOS releases.
+		if strings.Contains(r.Stdout+" "+r.Stderr, "No new software available") {
 			return []output.Finding{pass("harden.softwareupdate-list", "macOS is up to date")}
 		}
 		return []output.Finding{info("harden.softwareupdate-list", "Update list not recognised", firstLine(r.Stdout))}

@@ -5,7 +5,7 @@
 class MacCompass < Formula
   desc "Interactive CLI for macOS compromise detection"
   homepage "https://github.com/jimididit/mac-compass"
-  url "https://github.com/jimididit/mac-compass/archive/refs/tags/v0.3.0.tar.gz"
+  url "https://github.com/jimididit/mac-compass/archive/refs/tags/v0.4.0.tar.gz"
   sha256 "" # run: shasum -a 256 <(curl -sL <tarball_url>)
   license "MIT"
   head "https://github.com/jimididit/mac-compass.git", branch: "main"

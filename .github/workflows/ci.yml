@@ -43,13 +43,14 @@ jobs:
           go-version-file: go.mod
       - run: go build -o mac-compass .
       - name: collect
+        timeout-minutes: 10  # a stalled check must fail this step, not cancel the job and lose its logs
         # Failing checks are data, not CI failures; the artifacts and summary are the point.
         run: |
           set +e  # failing checks must not abort the step; exit codes are recorded below
           mkdir out
           sw_vers | tee out/sw_vers.txt
           uname -m | tee out/uname.txt
-          sudo ./mac-compass run-all -y --vm --json --html out/report.html --sarif out/report.sarif > out/run-all.json; echo "run-all exit=$?" | tee -a out/exit.txt
+          sudo ./mac-compass run-all -y --vm --progress --json --html out/report.html --sarif out/report.sarif > out/run-all.json 2> out/progress.txt; echo "run-all exit=$?" | tee -a out/exit.txt
           # Unprivileged pass: proves checks marked sudo:false really work as a normal user.
           ./mac-compass run-all -y --vm --no-sudo --json > out/run-all-nosudo.json; echo "nosudo exit=$?" | tee -a out/exit.txt
           test -s out/run-all.json && test -s out/run-all-nosudo.json

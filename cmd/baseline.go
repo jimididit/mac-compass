@@ -52,6 +52,9 @@ var snapshotCmd = &cobra.Command{
 			return err
 		}
 		if snapshotOut != "" {
+			if err := chownToInvoker(snapshotOut); err != nil {
+				return err
+			}
 			fmt.Fprintf(cmd.ErrOrStderr(), "Snapshot of %d checks written to %s\n", len(snap.Checks), snapshotOut)
 		}
 		return nil
@@ -83,11 +86,12 @@ var compareCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		res := baseline.Compare(old, cur)
 		var red redact.Redactor
-		if redactOutput {
+		if redactOutput || old.Redacted {
 			red = redact.ForCurrentUser()
 		}
+		alignRedaction(old, &cur, red)
+		res := baseline.Compare(old, cur)
 		rep := output.Report{
 			SchemaVersion: output.SchemaVersion,
 			Tool:          output.ToolInfo{Name: "mac-compass", Version: version},
@@ -121,6 +125,14 @@ var compareCmd = &cobra.Command{
 		}
 		return exitError(cmd, rep, threshold)
 	},
+}
+
+// alignRedaction masks the live snapshot when the baseline was masked. A masked baseline holds masked
+// names, so without this every item that mentions the user or host would look both new and removed.
+func alignRedaction(old baseline.Snapshot, cur *baseline.Snapshot, red redact.Redactor) {
+	if old.Redacted && !cur.Redacted {
+		red.Snapshot(cur)
+	}
 }
 
 func readSnapshot(path string) (baseline.Snapshot, error) {

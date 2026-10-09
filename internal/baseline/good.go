@@ -11,9 +11,11 @@ var goodState = map[string]func(string) bool{
 	"triage.gatekeeper":             hasText("assessments enabled"),
 	"network.firewall":              hasText("firewall is enabled"),
 	"security-tools.filevault":      hasText("filevault is on"),
-	"kernel.nvram-boot-args":        func(v string) bool { return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(v), "boot-args")) == "" },
-	"accounts.autologin":            func(v string) bool { return strings.TrimSpace(v) == "" },
-	"accounts.guest":                func(v string) bool { v = strings.TrimSpace(v); return v == "" || v == "0" },
+	"kernel.nvram-boot-args": func(v string) bool {
+		return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(v), "boot-args")) == ""
+	},
+	"accounts.autologin": func(v string) bool { return strings.TrimSpace(v) == "" },
+	"accounts.guest":     func(v string) bool { v = strings.TrimSpace(v); return v == "" || v == "0" },
 }
 
 func hasText(sub string) func(string) bool {

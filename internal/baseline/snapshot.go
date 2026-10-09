@@ -39,6 +39,7 @@ type Snapshot struct {
 	Host          output.HostInfo  `json:"host"`
 	TakenAt       time.Time        `json:"taken_at"`
 	SudoEnabled   bool             `json:"sudo_enabled"`
+	Redacted      bool             `json:"redacted,omitempty"` // host and user names are masked
 	Checks        map[string]Entry `json:"checks"`
 }
 

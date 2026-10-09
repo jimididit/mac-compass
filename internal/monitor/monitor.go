@@ -34,7 +34,7 @@ const (
 // State is what the monitor remembers between cycles.
 type State struct {
 	LastRun       time.Time `json:"last_run"`
-	LastResult    string    `json:"last_result"` // baselined, clean, changes, alerted, error
+	LastResult    string    `json:"last_result"` // baselined, clean, changes, alerted (this run), alert-active (unchanged since the last alert), error
 	LastError     string    `json:"last_error,omitempty"`
 	Runs          int       `json:"runs"`
 	BaselineTaken time.Time `json:"baseline_taken"`
@@ -148,7 +148,7 @@ func Run(ctx context.Context, o Options) (Result, error) {
 			st.LastResult = "changes"
 		}
 	case hash == st.AlertedHash:
-		st.LastResult = "alerted" // same findings as the last alert: do not nag
+		st.LastResult = "alert-active" // same findings as the last alert: still open, but do not nag
 	default:
 		res.Title, res.Body = alertText(serious)
 		if o.Notify != nil {

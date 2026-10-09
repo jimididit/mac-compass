@@ -66,6 +66,10 @@ func openReport() (*os.File, error) {
 		f.Close()
 		return nil, fmt.Errorf("restrict report file: %w", err)
 	}
+	if err := chownToInvoker(reportPath); err != nil {
+		f.Close()
+		return nil, err
+	}
 	return f, nil
 }
 
@@ -83,6 +87,9 @@ func executeSection(ctx context.Context, sectionID string, checks []catalog.Chec
 			out, errw = opts.OutWriter, opts.ErrWriter
 		}
 		res := runner.Run(ctx, ch, opts, out, errw)
+		if progress {
+			fmt.Fprintf(opts.ErrWriter, "[%s] %s %.1fs\n", ch.ID, progressStatus(res), res.Duration.Seconds())
+		}
 		if stream {
 			switch {
 			case res.Skipped:
@@ -110,6 +117,16 @@ func executeSection(ctx context.Context, sectionID string, checks []catalog.Chec
 		results = append(results, cr)
 	}
 	return results
+}
+
+func progressStatus(res runner.Result) string {
+	switch {
+	case res.Skipped:
+		return "skipped"
+	case res.Err != nil:
+		return "failed"
+	}
+	return "ok"
 }
 
 // runSection runs one catalog section (used by the per-section subcommands).
@@ -210,7 +227,7 @@ func writeExtraReports(rep output.Report) error {
 	if err := write(sarifPath, render.SARIF); err != nil {
 		return fmt.Errorf("--sarif: %w", err)
 	}
-	return nil
+	return chownToInvoker(htmlPath, sarifPath)
 }
 
 // buildReport assembles the report for a finished run, with findings evaluated.

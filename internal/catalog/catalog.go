@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -36,7 +37,7 @@ type Check struct {
 	Description      string   `yaml:"description"`
 	Command          string   `yaml:"command"`
 	Args             []string `yaml:"args"`
-	Script           string   `yaml:"script"` // If set, run with sh -c (for pipes etc.)
+	Script           string   `yaml:"script"`  // If set, run with sh -c (for pipes etc.)
 	Builtin          string   `yaml:"builtin"` // If set, run this in-process collector instead (see KnownBuiltins)
 	Sudo             bool     `yaml:"sudo"`
 	RequiresHardware bool     `yaml:"requires_hardware"` // T2/Secure Enclave etc.
@@ -49,6 +50,8 @@ type Check struct {
 	// Optional marks a check whose binary may be absent on some macOS versions;
 	// a missing binary is reported as skipped, not failed.
 	Optional bool `yaml:"optional"`
+	// Timeout caps this check below the global --timeout, for commands known to hang on some systems.
+	Timeout time.Duration `yaml:"timeout"`
 	// Attack lists MITRE ATT&CK technique ids (e.g. "T1543.004") this check helps detect.
 	Attack []string `yaml:"attack"`
 	// OKExit lists exit codes (besides 0) that mean the check ran fine, e.g. 1 for
@@ -151,6 +154,9 @@ func (c *Catalog) Validate() error {
 			errs = append(errs, fmt.Errorf("%s: duplicate id %q", where, ch.ID))
 		}
 		ids[ch.ID] = true
+		if ch.Timeout < 0 {
+			errs = append(errs, fmt.Errorf("%s: timeout must not be negative", where))
+		}
 		for _, t := range ch.Attack {
 			if !attackRe.MatchString(t) {
 				errs = append(errs, fmt.Errorf("%s: attack id %q must look like T1543 or T1543.004", where, t))

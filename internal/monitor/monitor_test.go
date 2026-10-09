@@ -94,7 +94,7 @@ func TestNewSeriousFindingAlertsOnceThenQuiets(t *testing.T) {
 	}
 	// Same problem next cycle: no second notification.
 	res, _ = Run(context.Background(), f.opts())
-	if res.Alerted || len(f.notes) != 1 || res.State.LastResult != "alerted" {
+	if res.Alerted || len(f.notes) != 1 || res.State.LastResult != "alert-active" {
 		t.Errorf("repeat alert for an unchanged situation: %+v notes=%v", res.State, f.notes)
 	}
 	// A different problem on top: alert again.
