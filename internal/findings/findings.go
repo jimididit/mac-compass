@@ -46,7 +46,7 @@ func Evaluate(sections []output.SectionResult) []output.Finding {
 			}
 			if !r.Ok {
 				out = append(out, output.Finding{
-					ID: r.ID, CheckID: r.ID, Status: output.StatusError,
+					ID: r.ID, CheckID: r.ID, Status: output.StatusError, Attack: r.Attack,
 					Title:  fmt.Sprintf("Check %q could not run", r.Name),
 					Detail: strings.TrimSpace(r.Error + " " + firstLine(r.Stderr)),
 				})
@@ -58,6 +58,7 @@ func Evaluate(sections []output.SectionResult) []output.Finding {
 			}
 			for _, f := range ev(r) {
 				f.CheckID = r.ID
+				f.Attack = r.Attack
 				out = append(out, f)
 			}
 		}
