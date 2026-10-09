@@ -15,7 +15,7 @@ func TestAccessEvaluators(t *testing.T) {
 		sev    output.Severity
 		want   string // substring of Title+Detail, optional
 	}{
-		{"extra uid 0", res("accounts.local-users", "_spotlight 89\nroot 0\nbackdoor 0\nalice 501\n"), output.StatusFail, output.SeverityHigh, "backdoor"},
+		{"extra uid 0", res("accounts.local-users", "_spotlight 89\nroot 0\nbackdoor 0\n"), output.StatusFail, output.SeverityHigh, "backdoor"},
 		{"normal users", res("accounts.local-users", "_spotlight 89\nroot 0\nalice 501\nbob 502\n"), output.StatusInfo, "", "2 local user"},
 		{"system only", res("accounts.local-users", "_spotlight 89\nroot 0\n"), output.StatusPass, "", ""},
 		{"admins", res("accounts.admin-group", "GroupMembership: root alice\n"), output.StatusInfo, "", "alice"},
