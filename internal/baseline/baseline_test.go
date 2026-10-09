@@ -279,3 +279,33 @@ func TestBTMExtractor_RealRunnerOutput(t *testing.T) {
 		t.Errorf("ankaupd.sh daemon missing: %v", items)
 	}
 }
+
+func TestCompare_ImprovementIsInfoNotFailure(t *testing.T) {
+	bad := snap(output.HostInfo{},
+		res("triage.sip", "System Integrity Protection status: disabled."),
+		res("network.firewall", "Firewall is disabled. (State = 0)"),
+		res("kernel.nvram-boot-args", "boot-args\t-v\n"),
+		res("accounts.autologin", "alice\n"),
+	)
+	good := snap(output.HostInfo{},
+		res("triage.sip", "System Integrity Protection status: enabled."),
+		res("network.firewall", "Firewall is enabled. (State = 1)"),
+		res("kernel.nvram-boot-args", "boot-args\t\n"),
+		res("accounts.autologin", ""),
+	)
+	r := Compare(bad, good)
+	for _, id := range []string{"triage.sip", "network.firewall", "kernel.nvram-boot-args", "accounts.autologin"} {
+		if f := find(t, r, id, output.StatusInfo); !strings.Contains(f.Title, "improved") {
+			t.Errorf("%s: %+v", id, f)
+		}
+	}
+	for _, f := range r.Findings {
+		if f.Status == output.StatusFail {
+			t.Errorf("an improvement must not fail: %+v", f)
+		}
+	}
+	// And the reverse direction still fails.
+	r = Compare(good, bad)
+	find(t, r, "triage.sip", output.StatusFail)
+	find(t, r, "network.firewall", output.StatusFail)
+}

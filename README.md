@@ -55,7 +55,7 @@ brew install mac-compass
 
 ### Interactive menu
 
-Run **mac-compass** with no arguments to get a numbered menu. Enter a number or subcommand name to run that section.
+Run **mac-compass** with no arguments to get a numbered menu. Enter a number or subcommand name to run that section; the menu returns after each one, and `q` quits.
 
 ```bash
 mac-compass
@@ -92,6 +92,7 @@ These work on the root command and on section subcommands:
 | `--json` | Output results as JSON instead of plain text |
 | `--report <path>` | Append human-readable output to a file (ignored when using `--json`) |
 | `--fail-on <severity>` | Exit `2` if any finding is at or above `info`, `low`, `medium`, `high` or `critical` |
+| `--redact` | Mask the host name and your user name in output, JSON reports and snapshots (not serial numbers, UUIDs or IP addresses). Redact both sides of a `compare` or neither. |
 
 ### Findings
 
@@ -111,7 +112,7 @@ mac-compass compare baseline.json today.json      # or diff two snapshots
 sudo mac-compass compare baseline.json --fail-on medium
 ```
 
-A snapshot is a normalized inventory: LaunchDaemons/Agents, login items, crontab, kernel and system extensions, TCP/UDP listeners, DNS servers, and security settings (SIP, Gatekeeper, firewall, FileVault, boot-args, update switches). Volatile details (pids, timestamps, sizes) are stripped. Additions are findings, removals are informational, and a changed setting is a finding. A different macOS version, host name or sudo setting between snapshots is reported so Apple's own post-update changes are not mistaken for tampering. Snapshot files are written with mode `0600`.
+A snapshot is a normalized inventory: LaunchDaemons/Agents, login items, crontab, kernel and system extensions, TCP/UDP listeners, DNS servers, and security settings (SIP, Gatekeeper, firewall, FileVault, boot-args, update switches). Volatile details (pids, timestamps, sizes) are stripped. Additions are findings, removals are informational, and a changed setting is a finding. A setting that moves to its secure value (for example SIP turned back on) is reported as an improvement, not a failure. A different macOS version, host name or sudo setting between snapshots is reported so Apple's own post-update changes are not mistaken for tampering. Snapshot files are written with mode `0600`.
 
 ### Exit status and safety
 
