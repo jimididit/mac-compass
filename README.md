@@ -30,27 +30,33 @@ later.
 
 ## Quick start
 
-Download the latest build from [**Releases**](https://github.com/jimididit/mac-compass/releases) (one universal
-binary for Apple Silicon and Intel), then:
+Install the latest release from Terminal. Downloads made with `curl` are not flagged by macOS, so there is no
+"Apple could not verify" prompt:
 
 ```bash
-tar -xzf mac-compass_*_macos_universal.tar.gz && cd mac-compass_*_macos_universal
-xattr -dr com.apple.quarantine .        # the binary is not notarized yet
+mkdir mac-compass && cd mac-compass
+VER=$(curl -fsSL https://api.github.com/repos/jimididit/mac-compass/releases/latest | grep -m1 '"tag_name"' | cut -d'"' -f4)
+curl -fsSL "https://github.com/jimididit/mac-compass/releases/download/${VER}/mac-compass_${VER#v}_macos_universal.tar.gz" | tar -xz
 ./mac-compass triage --no-sudo          # quick look, no password needed
 sudo ./mac-compass run-all -y           # the full check
 ```
 
-Or build it yourself (Go 1.24+): `go install github.com/jimididit/mac-compass@latest`
+Or build it yourself (Go 1.24+), which also avoids the prompt: `go install github.com/jimididit/mac-compass@latest`
+
+**Downloaded with a browser instead?** The binary is signed but not yet notarized by Apple, so macOS shows
+"Apple could not verify..." the first time. Clear it with `xattr -dr com.apple.quarantine .` in the extracted
+folder, or open System Settings > Privacy & Security, find the "mac-compass was blocked" notice and click
+**Open Anyway**.
 
 <details>
 <summary>Verify the download first (recommended before running anything as root)</summary>
 
 ```bash
+# download the archive and checksums.txt from the release page into one folder, then:
 shasum -a 256 -c checksums.txt --ignore-missing
 gh attestation verify mac-compass_*_macos_universal.tar.gz --repo jimididit/mac-compass   # build provenance
+codesign -dv ./mac-compass 2>&1 | grep -E "Identifier|Signature"                          # ad-hoc signed
 ```
-
-If macOS reports `zsh: killed`, sign it locally: `codesign --force --sign - ./mac-compass`.
 
 </details>
 
