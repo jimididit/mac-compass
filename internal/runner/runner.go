@@ -96,7 +96,8 @@ func Run(ctx context.Context, ch catalog.Check, opts Options, out, errw io.Write
 		}
 	}
 
-	runCtx, cancel := context.WithTimeout(ctx, opts.Timeout)
+	timeout := effectiveTimeout(ch, opts)
+	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	var argv []string
@@ -128,7 +129,7 @@ func Run(ctx context.Context, ch catalog.Check, opts Options, out, errw io.Write
 	}
 	if runCtx.Err() == context.DeadlineExceeded {
 		res.ExitCode = -1
-		res.Err = fmt.Errorf("timeout after %v", opts.Timeout)
+		res.Err = fmt.Errorf("timeout after %v", timeout)
 		return res
 	}
 	var exitErr *exec.ExitError
@@ -175,6 +176,14 @@ func ParseMajor(v string) int {
 		return 0
 	}
 	return n
+}
+
+// effectiveTimeout is the check's own cap when it has one and it is shorter than the global timeout.
+func effectiveTimeout(ch catalog.Check, opts Options) time.Duration {
+	if ch.Timeout > 0 && ch.Timeout < opts.Timeout {
+		return ch.Timeout
+	}
+	return opts.Timeout
 }
 
 // HostArch returns the running CPU architecture in uname -m terms (x86_64, arm64).

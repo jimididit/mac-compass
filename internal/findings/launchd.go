@@ -8,6 +8,9 @@ import (
 	"github.com/jimididit/mac-compass/internal/runner"
 )
 
+// monitorLabel is the launchd label of mac-compass monitor's own job; a test keeps it equal to monitor.Label.
+const monitorLabel = "io.github.jimididit.mac-compass.monitor"
+
 func init() { evaluators["persistence.launchd-targets"] = evalLaunchdTargets }
 
 // launchItem is one parsed row of the launchd-targets collector.
@@ -49,6 +52,10 @@ func evalLaunchdTargets(r output.CheckResult) []output.Finding {
 	var temp, unsigned, adhoc, missing, scripts []string
 	counts := map[string]int{}
 	for _, it := range items {
+		if it.Label == monitorLabel {
+			counts["mac-compass monitor job"]++
+			continue
+		}
 		switch {
 		case it.Flags["temp-location"] || it.Flags["hidden-location"]:
 			temp = append(temp, it.String()+" ["+locationFlag(it)+"]")
@@ -109,7 +116,7 @@ func summaryBucket(it launchItem) string {
 
 func summaryLine(counts map[string]int) string {
 	var parts []string
-	for _, k := range []string{"Apple", "Developer ID, notarized", "Developer ID, not notarized", "Developer ID, notarization unknown", "other signature", "adhoc", "unsigned", "script", "missing", "unreadable", "no-program"} {
+	for _, k := range []string{"Apple", "Developer ID, notarized", "Developer ID, not notarized", "Developer ID, notarization unknown", "other signature", "adhoc", "unsigned", "script", "missing", "unreadable", "no-program", "mac-compass monitor job"} {
 		if n := counts[k]; n > 0 {
 			parts = append(parts, fmt.Sprintf("%d %s", n, k))
 		}

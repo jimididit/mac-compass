@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -80,6 +81,9 @@ var collectCmd = &cobra.Command{
 		m, hash, err := evidence.Write(dir, in)
 		if err != nil {
 			return err
+		}
+		if err := chownToInvoker(dir); err != nil {
+			return fmt.Errorf("hand the bundle to %s: %w", os.Getenv("SUDO_USER"), err)
 		}
 		w := cmd.OutOrStdout()
 		fmt.Fprintf(w, "Evidence bundle written to %s (%d files, mode 0700)\n\n", dir, len(m.Files))

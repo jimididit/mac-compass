@@ -4,7 +4,19 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Fixed
+- `compare` against a baseline taken with `--redact` no longer reports every item that mentions the user or host
+  as both new and removed: the live snapshot is masked the same way before the comparison.
+- `softwareupdate` reporting "No new software available" on stderr (macOS 15) is now recognised as up to date.
+- Files written under `sudo` (`--html`, `--sarif`, `--report`, `snapshot -o`, `collect`) are handed back to the user
+  who ran `sudo`; runtime errors no longer print the full usage text.
+- Findings: hidden folders under a home directory (developer tool caches) are medium instead of high, the monitor's
+  own launch item is not flagged, and TCC and timeout errors explain what to do.
+- Monitor status says `alert-active` when findings were already announced instead of repeating `alerted`.
+
 ### Added
+- `--progress` prints one line per check to stderr, and a check can have its own shorter time limit; login items
+  and the update check now do, so one slow check cannot hold up a whole run.
 - `monitor` runs the baseline comparison on a schedule through launchd (`install`, `status`, `run`, `uninstall`),
   alerting once when the set of serious new findings changes. A root daemon is refused unless the binary and its
   folders are root-owned and not writable by others.
