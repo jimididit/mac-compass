@@ -4,6 +4,11 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Fixed
+- Release binaries are now ad-hoc code signed. An unsigned x86_64 binary was killed by macOS (`zsh: killed`) when
+  it carried the quarantine flag of a browser download. The release build runs on macOS to sign them, and the
+  pipeline can be dry-run without publishing.
+
 ### Added
 - `monitor` runs the baseline comparison on a schedule through launchd (`install`, `status`, `run`, `uninstall`),
   alerting once when the set of serious new findings changes. A root daemon is refused unless the binary and its
