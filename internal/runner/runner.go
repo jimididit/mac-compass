@@ -138,17 +138,28 @@ func Run(ctx context.Context, ch catalog.Check, opts Options, out, errw io.Write
 	return res
 }
 
-// DetectMacOSMajor returns the macOS major version (e.g. 15, 26), or 0 if it cannot be
+// MacOSInfo describes the running macOS.
+type MacOSInfo struct {
+	Version string // e.g. "26.6.2"
+	Build   string // e.g. "25G83"
+	Major   int    // e.g. 26; 0 if unknown
+}
+
+// DetectMacOS returns the running macOS version, or the zero value when it cannot be
 // determined (non-macOS host, sw_vers missing, unexpected output).
-func DetectMacOSMajor() int {
+func DetectMacOS() MacOSInfo {
 	if runtime.GOOS != "darwin" {
-		return 0
+		return MacOSInfo{}
 	}
-	out, err := exec.Command("/usr/bin/sw_vers", "-productVersion").Output()
-	if err != nil {
-		return 0
+	sw := func(flag string) string {
+		out, err := exec.Command("/usr/bin/sw_vers", flag).Output()
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(out))
 	}
-	return ParseMajor(string(out))
+	v := sw("-productVersion")
+	return MacOSInfo{Version: v, Build: sw("-buildVersion"), Major: ParseMajor(v)}
 }
 
 // ParseMajor extracts the major version from "26.6.2", "15.7", "10.15.7" style strings.

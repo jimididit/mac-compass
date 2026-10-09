@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -19,6 +20,7 @@ var (
 	timeout    time.Duration
 	jsonOutput bool
 	reportPath string
+	failOn     string
 )
 
 var rootCmd = &cobra.Command{
@@ -34,6 +36,7 @@ func init() {
 	rootCmd.PersistentFlags().DurationVar(&timeout, "timeout", 90*time.Second, "Per-check timeout")
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output results as JSON")
 	rootCmd.PersistentFlags().StringVar(&reportPath, "report", "", "Also write human-readable output to file")
+	rootCmd.PersistentFlags().StringVar(&failOn, "fail-on", "", "Exit 2 if any finding is at or above this severity (info|low|medium|high|critical)")
 	rootCmd.CompletionOptions.DisableDefaultCmd = false
 	rootCmd.SilenceErrors = true // Execute prints the error once
 	addStubCommands()
@@ -45,6 +48,9 @@ func Execute() {
 	stop()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		if errors.Is(err, errFindingsThreshold) {
+			os.Exit(2)
+		}
 		os.Exit(1)
 	}
 }

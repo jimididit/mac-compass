@@ -7,15 +7,22 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"strings"
+	"time"
 
 	"github.com/jimididit/mac-compass/internal/catalog"
+	"github.com/jimididit/mac-compass/internal/findings"
 	"github.com/jimididit/mac-compass/internal/output"
 	"github.com/jimididit/mac-compass/internal/runner"
 	"github.com/spf13/cobra"
 )
 
-// errChecksFailed is returned (and mapped to exit status 1) when any check failed.
-var errChecksFailed = errors.New("one or more checks failed")
+var (
+	// errChecksFailed maps to exit status 1: a check could not run or failed.
+	errChecksFailed = errors.New("one or more checks failed")
+	// errFindingsThreshold maps to exit status 2: a finding met the --fail-on severity.
+	errFindingsThreshold = errors.New("findings at or above the --fail-on severity")
+)
 
 // requireDarwin refuses to run checks on non-macOS hosts unless overridden for development.
 func requireDarwin() error {
@@ -26,13 +33,13 @@ func requireDarwin() error {
 }
 
 // runnerOptions builds runner options from the global flags.
-func runnerOptions(cmd *cobra.Command) runner.Options {
+func runnerOptions(cmd *cobra.Command, macMajor int) runner.Options {
 	return runner.Options{
 		Timeout:         timeout,
 		UseSudo:         !noSudo,
 		SkipSudo:        noSudo,
 		VMMode:          vmMode,
-		MacOSMajor:      runner.DetectMacOSMajor(),
+		MacOSMajor:      macMajor,
 		SudoAllowPrompt: hasTTY(),
 		OutWriter:       cmd.OutOrStdout(),
 		ErrWriter:       cmd.ErrOrStderr(),
@@ -46,12 +53,43 @@ func cmdContext(cmd *cobra.Command) context.Context {
 	return context.Background()
 }
 
-// collectSection runs every check in a section, capturing results for JSON output.
-func collectSection(ctx context.Context, sectionID string, checks []catalog.Check, opts runner.Options) []output.CheckResult {
+// openReport opens the --report file (mode 0600: reports contain sensitive host data).
+func openReport() (*os.File, error) {
+	f, err := os.OpenFile(reportPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return nil, fmt.Errorf("open report file: %w", err)
+	}
+	if err := f.Chmod(0o600); err != nil && runtime.GOOS != "windows" {
+		f.Close()
+		return nil, fmt.Errorf("restrict report file: %w", err)
+	}
+	return f, nil
+}
+
+// executeSection runs every check in a section. With stream set it prints each check's
+// output as it is produced (text mode); results are always captured for findings.
+func executeSection(ctx context.Context, sectionID string, checks []catalog.Check, opts runner.Options, stream bool) []output.CheckResult {
 	results := make([]output.CheckResult, 0, len(checks))
 	for _, ch := range checks {
-		res := runner.Run(ctx, ch, opts, nil, nil)
+		var out, errw io.Writer
+		if stream {
+			fmt.Fprintf(opts.OutWriter, "\n--- %s ---\n", ch.Name)
+			if ch.Description != "" {
+				fmt.Fprintf(opts.OutWriter, "# %s\n", ch.Description)
+			}
+			out, errw = opts.OutWriter, opts.ErrWriter
+		}
+		res := runner.Run(ctx, ch, opts, out, errw)
+		if stream {
+			switch {
+			case res.Skipped:
+				fmt.Fprintf(opts.ErrWriter, "  skipped: %s\n", res.SkipReason)
+			case res.Err != nil:
+				fmt.Fprintf(opts.ErrWriter, "  error: %v\n", res.Err)
+			}
+		}
 		cr := output.CheckResult{
+			ID:         ch.ID,
 			Section:    sectionID,
 			Name:       ch.Name,
 			Ok:         res.Err == nil && !res.Skipped,
@@ -70,44 +108,26 @@ func collectSection(ctx context.Context, sectionID string, checks []catalog.Chec
 	return results
 }
 
-func countFailed(results []output.CheckResult) int {
-	n := 0
-	for _, r := range results {
-		if !r.Ok && !r.Skipped {
-			n++
-		}
-	}
-	return n
-}
-
-// openReport opens the --report file (mode 0600: reports contain sensitive host data).
-func openReport() (*os.File, error) {
-	f, err := os.OpenFile(reportPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
-	if err != nil {
-		return nil, fmt.Errorf("open report file: %w", err)
-	}
-	if err := f.Chmod(0o600); err != nil && runtime.GOOS != "windows" {
-		f.Close()
-		return nil, fmt.Errorf("restrict report file: %w", err)
-	}
-	return f, nil
-}
-
-// runSection loads the catalog, runs all checks for sectionID, and writes output to cmd.
+// runSection runs one catalog section (used by the per-section subcommands).
 func runSection(cmd *cobra.Command, sectionID string) error {
+	return runSections(cmd, []string{sectionID})
+}
+
+// runSections runs the given sections, evaluates findings, and writes JSON or text.
+func runSections(cmd *cobra.Command, sectionIDs []string) error {
 	if err := requireDarwin(); err != nil {
+		return err
+	}
+	threshold, err := parseFailOn(failOn)
+	if err != nil {
 		return err
 	}
 	cat, err := catalog.Load()
 	if err != nil {
 		return err
 	}
-	checks := cat.BySection(sectionID)
-	if len(checks) == 0 {
-		cmd.Printf("No checks for section %q in catalog.\n", sectionID)
-		return nil
-	}
-	opts := runnerOptions(cmd)
+	sys := runner.DetectMacOS()
+	opts := runnerOptions(cmd, sys.Major)
 	if reportPath != "" && !jsonOutput {
 		f, err := openReport()
 		if err != nil {
@@ -118,41 +138,107 @@ func runSection(cmd *cobra.Command, sectionID string) error {
 		opts.ErrWriter = io.MultiWriter(opts.ErrWriter, f)
 	}
 	ctx := cmdContext(cmd)
+	started := time.Now()
+
+	var sections []output.SectionResult
+	for _, id := range sectionIDs {
+		checks := cat.BySection(id)
+		if len(checks) == 0 {
+			cmd.Printf("No checks for section %q in catalog.\n", id)
+			continue
+		}
+		if len(sectionIDs) > 1 && !jsonOutput {
+			fmt.Fprintf(opts.OutWriter, "\n========== %s ==========\n", id)
+		}
+		sections = append(sections, output.SectionResult{Section: id, Checks: executeSection(ctx, id, checks, opts, !jsonOutput)})
+	}
+
+	host, _ := os.Hostname()
+	rep := output.Report{
+		SchemaVersion: output.SchemaVersion,
+		Tool:          output.ToolInfo{Name: "mac-compass", Version: version},
+		Host:          output.HostInfo{Hostname: host, OS: runtime.GOOS, MacOSVersion: sys.Version, MacOSBuild: sys.Build, Arch: runtime.GOARCH},
+		StartedAt:     started.UTC(),
+		DurationMS:    time.Since(started).Milliseconds(),
+		SudoEnabled:   !noSudo,
+		VMMode:        vmMode,
+		Sections:      sections,
+		Findings:      findings.Evaluate(sections),
+	}
+	rep.Summarize()
 
 	if jsonOutput {
-		results := collectSection(ctx, sectionID, checks, opts)
-		if err := output.WriteJSON(cmd.OutOrStdout(), []output.SectionResult{{Section: sectionID, Checks: results}}); err != nil {
+		if err := output.WriteJSON(cmd.OutOrStdout(), rep); err != nil {
 			return err
 		}
-		return failedErr(cmd, countFailed(results))
+	} else {
+		writeFindings(opts.OutWriter, rep)
 	}
-
-	failed := 0
-	for _, ch := range checks {
-		fmt.Fprintf(cmd.OutOrStdout(), "\n--- %s ---\n", ch.Name)
-		if ch.Description != "" {
-			fmt.Fprintf(opts.OutWriter, "# %s\n", ch.Description)
-		}
-		if err := runner.RunCheck(ctx, ch, opts); err != nil {
-			if errors.Is(err, runner.ErrSkipped) {
-				fmt.Fprintf(opts.ErrWriter, "  skipped: requires sudo\n")
-				continue
-			}
-			failed++
-			fmt.Fprintf(opts.ErrWriter, "  error: %v\n", err)
-		}
-	}
-	fmt.Fprintln(opts.OutWriter)
-	return failedErr(cmd, failed)
+	return exitError(cmd, rep, threshold)
 }
 
-// failedErr maps a failure count to errChecksFailed, silencing cobra's usage dump.
-func failedErr(cmd *cobra.Command, failed int) error {
-	if failed == 0 {
-		return nil
+// exitError maps a finished report to the process outcome.
+func exitError(cmd *cobra.Command, rep output.Report, threshold output.Severity) error {
+	if threshold != "" && rep.Summary.HighestSeverity.Rank() >= threshold.Rank() {
+		cmd.SilenceUsage = true
+		return fmt.Errorf("%w (%s): highest is %s", errFindingsThreshold, threshold, rep.Summary.HighestSeverity)
 	}
-	cmd.SilenceUsage = true
-	return fmt.Errorf("%w (%d)", errChecksFailed, failed)
+	if rep.Summary.ChecksFailed > 0 {
+		cmd.SilenceUsage = true
+		return fmt.Errorf("%w (%d)", errChecksFailed, rep.Summary.ChecksFailed)
+	}
+	return nil
+}
+
+// parseFailOn validates --fail-on; empty means never fail on findings.
+func parseFailOn(s string) (output.Severity, error) {
+	if s == "" {
+		return "", nil
+	}
+	sev := output.Severity(strings.ToLower(s))
+	if sev.Rank() == 0 {
+		return "", fmt.Errorf("--fail-on must be one of info, low, medium, high, critical (got %q)", s)
+	}
+	return sev, nil
+}
+
+// writeFindings prints the human-readable findings summary.
+func writeFindings(w io.Writer, rep output.Report) {
+	fmt.Fprint(w, "\n========== Findings ==========\n")
+	shown := 0
+	for _, f := range rep.Findings {
+		if f.Status == output.StatusPass {
+			continue
+		}
+		shown++
+		tag := string(f.Status)
+		if f.Status == output.StatusFail {
+			tag = string(f.Severity)
+		}
+		fmt.Fprintf(w, "[%s] %s\n", strings.ToUpper(tag), f.Title)
+		if f.Detail != "" {
+			fmt.Fprintf(w, "    %s\n", strings.ReplaceAll(f.Detail, "\n", "\n    "))
+		}
+		if f.Remediation != "" {
+			fmt.Fprintf(w, "    fix: %s\n", f.Remediation)
+		}
+	}
+	if shown == 0 {
+		fmt.Fprintln(w, "No findings.")
+	}
+	s := rep.Summary
+	var sev []string
+	for _, v := range []output.Severity{output.SeverityCritical, output.SeverityHigh, output.SeverityMedium, output.SeverityLow, output.SeverityInfo} {
+		if n := s.FailBySeverity[v]; n > 0 {
+			sev = append(sev, fmt.Sprintf("%d %s", n, v))
+		}
+	}
+	failed := fmt.Sprintf("%d failed", s.Fail)
+	if len(sev) > 0 {
+		failed += " (" + strings.Join(sev, ", ") + ")"
+	}
+	fmt.Fprintf(w, "\n%s, %d passed, %d info, %d errors; checks: %d ok, %d skipped, %d failed\n",
+		failed, s.Pass, s.Info, s.Error, s.ChecksOK, s.ChecksSkipped, s.ChecksFailed)
 }
 
 // hasTTY reports whether the process has a controlling terminal (so sudo can prompt for a password).

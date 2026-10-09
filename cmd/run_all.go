@@ -2,12 +2,10 @@ package cmd
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/jimididit/mac-compass/internal/catalog"
-	"github.com/jimididit/mac-compass/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -52,31 +50,5 @@ func runRunAll(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if jsonOutput {
-		opts := runnerOptions(cmd)
-		ctx := cmdContext(cmd)
-		var allResults []output.SectionResult
-		failed := 0
-		for _, sectionID := range sections {
-			results := collectSection(ctx, sectionID, cat.BySection(sectionID), opts)
-			failed += countFailed(results)
-			allResults = append(allResults, output.SectionResult{Section: sectionID, Checks: results})
-		}
-		if err := output.WriteJSON(cmd.OutOrStdout(), allResults); err != nil {
-			return err
-		}
-		return failedErr(cmd, failed)
-	}
-
-	failedSections := 0
-	for _, sectionID := range sections {
-		fmt.Fprintf(cmd.OutOrStdout(), "\n========== %s ==========\n", sectionID)
-		if err := runSection(cmd, sectionID); err != nil {
-			if !errors.Is(err, errChecksFailed) {
-				return err
-			}
-			failedSections++
-		}
-	}
-	return failedErr(cmd, failedSections)
+	return runSections(cmd, sections)
 }

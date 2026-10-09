@@ -6,57 +6,65 @@ import (
 	"testing"
 )
 
-func TestWriteJSON(t *testing.T) {
-	sections := []SectionResult{
-		{
-			Section: "triage",
-			Checks: []CheckResult{
-				{Section: "triage", Name: "SIP status", Ok: true, Stdout: "enabled"},
-				{Section: "triage", Name: "Gatekeeper", Ok: false, Error: "exit status 1"},
-			},
-		},
+func TestSeverityRank(t *testing.T) {
+	order := []Severity{SeverityInfo, SeverityLow, SeverityMedium, SeverityHigh, SeverityCritical}
+	for i := 1; i < len(order); i++ {
+		if order[i].Rank() <= order[i-1].Rank() {
+			t.Errorf("%s should outrank %s", order[i], order[i-1])
+		}
 	}
-	var buf bytes.Buffer
-	err := WriteJSON(&buf, sections)
-	if err != nil {
-		t.Fatalf("WriteJSON: %v", err)
-	}
-	if buf.Len() == 0 {
-		t.Fatal("WriteJSON wrote nothing")
-	}
-	// Round-trip
-	var decoded []SectionResult
-	if err := json.NewDecoder(&buf).Decode(&decoded); err != nil {
-		t.Fatalf("decode written JSON: %v", err)
-	}
-	if len(decoded) != 1 {
-		t.Fatalf("decoded %d sections; want 1", len(decoded))
-	}
-	if decoded[0].Section != "triage" {
-		t.Errorf("section = %q; want \"triage\"", decoded[0].Section)
-	}
-	if len(decoded[0].Checks) != 2 {
-		t.Fatalf("decoded %d checks; want 2", len(decoded[0].Checks))
-	}
-	if decoded[0].Checks[0].Name != "SIP status" || !decoded[0].Checks[0].Ok {
-		t.Errorf("first check: name=%q ok=%v", decoded[0].Checks[0].Name, decoded[0].Checks[0].Ok)
-	}
-	if decoded[0].Checks[1].Name != "Gatekeeper" || decoded[0].Checks[1].Ok {
-		t.Errorf("second check: name=%q ok=%v", decoded[0].Checks[1].Name, decoded[0].Checks[1].Ok)
+	if Severity("bogus").Rank() != 0 {
+		t.Error("unknown severity must rank 0")
 	}
 }
 
-func TestWriteJSON_Empty(t *testing.T) {
-	var buf bytes.Buffer
-	err := WriteJSON(&buf, nil)
-	if err != nil {
-		t.Fatalf("WriteJSON(nil): %v", err)
+func TestSummarize(t *testing.T) {
+	r := Report{
+		Sections: []SectionResult{{Section: "triage", Checks: []CheckResult{
+			{Ok: true}, {Skipped: true}, {Ok: false, Error: "boom"},
+		}}},
+		Findings: []Finding{
+			{Status: StatusPass}, {Status: StatusInfo}, {Status: StatusError},
+			{Status: StatusFail, Severity: SeverityLow},
+			{Status: StatusFail, Severity: SeverityHigh},
+			{Status: StatusFail, Severity: SeverityHigh},
+		},
 	}
-	var decoded []SectionResult
-	if err := json.Unmarshal(buf.Bytes(), &decoded); err != nil {
+	r.Summarize()
+	s := r.Summary
+	if s.ChecksOK != 1 || s.ChecksSkipped != 1 || s.ChecksFailed != 1 {
+		t.Errorf("check counts wrong: %+v", s)
+	}
+	if s.Pass != 1 || s.Info != 1 || s.Error != 1 || s.Fail != 3 {
+		t.Errorf("finding counts wrong: %+v", s)
+	}
+	if s.FailBySeverity[SeverityHigh] != 2 || s.FailBySeverity[SeverityLow] != 1 || s.HighestSeverity != SeverityHigh {
+		t.Errorf("severity summary wrong: %+v", s)
+	}
+}
+
+func TestWriteJSON_RoundTrip(t *testing.T) {
+	r := Report{
+		SchemaVersion: SchemaVersion,
+		Tool:          ToolInfo{Name: "mac-compass", Version: "test"},
+		Host:          HostInfo{OS: "darwin", Arch: "arm64", MacOSVersion: "26.6.2"},
+		Sections: []SectionResult{{Section: "triage", Checks: []CheckResult{
+			{ID: "triage.sip", Section: "triage", Name: "SIP status", Ok: true, Stdout: "enabled"},
+		}}},
+		Findings: []Finding{{ID: "triage.sip", CheckID: "triage.sip", Status: StatusPass, Title: "SIP enabled"}},
+	}
+	r.Summarize()
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, r); err != nil {
+		t.Fatal(err)
+	}
+	var got Report
+	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if decoded != nil {
-		t.Errorf("decoded nil input as %v", decoded)
+	if got.SchemaVersion != SchemaVersion || got.Host.MacOSVersion != "26.6.2" ||
+		len(got.Sections) != 1 || got.Sections[0].Checks[0].ID != "triage.sip" ||
+		len(got.Findings) != 1 || got.Summary.Pass != 1 {
+		t.Errorf("round trip mismatch: %+v", got)
 	}
 }

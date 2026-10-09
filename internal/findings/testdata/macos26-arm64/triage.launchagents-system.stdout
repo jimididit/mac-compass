@@ -1,0 +1,8 @@
+total 40
+drwxr-xr-x   7 root  wheel   224 Sep  7 04:04 .
+drwxr-xr-x  67 root  wheel  2144 Sep  7 05:56 ..
+-rw-r--r--   1 root  wheel   561 Jul 20 18:01 com.veertu.anka.addons.ankacp.plist
+-rw-r--r--   1 root  wheel   563 Jul 20 18:01 com.veertu.anka.addons.ankarun.plist
+-rw-r--r--   1 root  wheel   566 Jul 20 18:01 com.veertu.anka.addons.copypaste.plist
+-rw-r--r--   1 root  wheel   628 Jul 20 18:01 com.veertu.anka.addons.locale.plist
+-rw-r--r--   1 root  wheel   609 Jul 20 18:01 com.veertu.anka.addons.screenunsaver.plist

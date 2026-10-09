@@ -1,0 +1,12 @@
+Software Update Tool
+
+Finding available software
+Software Update found the following new or updated software:
+* Label: Safari27.0TahoeAuto-27.0
+	Title: Safari, Version: 27.0, Size: 249465KiB, Recommended: YES, 
+* Label: Command Line Tools for Xcode 27.0-27.0
+	Title: Command Line Tools for Xcode 27.0, Version: 27.0, Size: 519460KiB, Recommended: YES, 
+* Label: macOS Tahoe 26.7.1-25G241
+	Title: macOS Tahoe 26.7.1, Version: 26.7.1, Size: 2960823KiB, Recommended: YES, Action: restart, 
+* Label: macOS 27.0.1-26A434
+	Title: macOS 27.0.1, Version: 27.0.1, Size: 11713682KiB, Recommended: YES, Action: restart, 
