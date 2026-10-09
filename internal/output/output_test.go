@@ -68,3 +68,14 @@ func TestWriteJSON_RoundTrip(t *testing.T) {
 		t.Errorf("round trip mismatch: %+v", got)
 	}
 }
+
+func TestWriteJSON_EmptyListsAreArrays(t *testing.T) {
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, Report{}); err != nil {
+		t.Fatal(err)
+	}
+	s := buf.String()
+	if !bytes.Contains(buf.Bytes(), []byte(`"findings": []`)) || !bytes.Contains(buf.Bytes(), []byte(`"sections": []`)) {
+		t.Errorf("empty lists must serialize as [], got: %s", s)
+	}
+}

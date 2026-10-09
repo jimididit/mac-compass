@@ -52,9 +52,24 @@ jobs:
           # Unprivileged pass: proves checks marked sudo:false really work as a normal user.
           ./mac-compass run-all -y --vm --no-sudo --json > out/run-all-nosudo.json; echo "nosudo exit=$?" | tee -a out/exit.txt
           test -s out/run-all.json && test -s out/run-all-nosudo.json
+      - name: baseline (snapshot, plant a change, compare)
+        run: |
+          sudo ./mac-compass snapshot --vm -o out/snap-a.json
+          sudo ./mac-compass compare out/snap-a.json --vm --json > out/compare-untouched.json || true
+          mkdir -p "$HOME/Library/LaunchAgents"
+          touch "$HOME/Library/LaunchAgents/com.example.compass-ci-test.plist"
+          sudo ./mac-compass snapshot --vm -o out/snap-b.json
+          sudo ./mac-compass compare out/snap-a.json out/snap-b.json --json > out/compare-planted.json || true
+          rm -f "$HOME/Library/LaunchAgents/com.example.compass-ci-test.plist"
+          # Snapshots are root-owned 0600 (by design); hand them to the runner user so they can be uploaded.
+          sudo chown "$(id -un)" out/snap-a.json out/snap-b.json
+          # The planted LaunchAgent must be reported as new; this proves snapshot+compare end to end.
+          jq -e '.findings[] | select(.id=="persistence.launchagents-user" and .status=="fail" and (.detail|contains("com.example.compass-ci-test.plist")))' out/compare-planted.json
       - name: summary
         run: |
           {
+            echo "**baseline, untouched machine (should be near-empty)**: $(jq -r '.summary | "\(.fail) fail, \(.info) info"' out/compare-untouched.json)"
+            jq -r '.findings[] | select(.status=="fail") | "- \(.severity) \(.id): \(.title)"' out/compare-untouched.json
             echo "### $(sw_vers -productName) $(sw_vers -productVersion) ($(uname -m)) on ${{ matrix.os }}"
             for f in run-all run-all-nosudo; do
               echo "**$f**: $(jq -r '.summary | "\(.checks_ok) ok, \(.checks_skipped) skipped, \(.checks_failed) failed checks; findings: \(.fail) fail, \(.pass) pass, \(.info) info, \(.error) error"' out/$f.json)"
