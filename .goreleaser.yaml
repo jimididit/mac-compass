@@ -50,6 +50,10 @@ changelog:
     exclude:
       - "^Merge pull request"
       - "^Merge branch"
+      - "^docs:"
+      - "^test:"
+      - "^chore"
+      - "^ci:"
 
 release:
   github:
