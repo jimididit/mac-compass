@@ -157,6 +157,13 @@ func (r *Report) Summarize() {
 
 // WriteJSON writes the report as indented JSON to w.
 func WriteJSON(w io.Writer, r Report) error {
+	// Emit [] rather than null so consumers can iterate without a nil check.
+	if r.Sections == nil {
+		r.Sections = []SectionResult{}
+	}
+	if r.Findings == nil {
+		r.Findings = []Finding{}
+	}
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(r)
