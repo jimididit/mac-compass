@@ -32,12 +32,12 @@ archives:
     ids: [universal]
     formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_macos_universal"
-    files: [LICENSE, README.md]
+    files: [LICENSE, README.md, SHARING.md]
   - id: per-arch
     ids: [mac-compass]
     formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_macos_{{ .Arch }}"
-    files: [LICENSE, README.md]
+    files: [LICENSE, README.md, SHARING.md]
 
 checksum:
   name_template: checksums.txt
