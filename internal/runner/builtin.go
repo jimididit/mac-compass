@@ -20,10 +20,11 @@ type execFn func(ctx context.Context, argv ...string) (stdout, stderr string, co
 
 // deps are the system touchpoints a builtin collector uses, injectable for tests.
 type deps struct {
-	exec    execFn
-	listDir func(dir string) ([]string, error) // file names in dir
-	exists  func(path string) bool
-	home    string // the invoking user's home directory
+	exec     execFn
+	listDir  func(dir string) ([]string, error) // file names in dir
+	exists   func(path string) bool
+	readHead func(path string, n int) ([]byte, error) // first n bytes of a file
+	home     string                                   // the invoking user's home directory
 }
 
 type builtinFn func(ctx context.Context, d deps) (string, error)
@@ -43,7 +44,7 @@ func runBuiltin(ctx context.Context, ch catalog.Check, opts Options, out io.Writ
 	defer cancel()
 	home, _ := invokingUserHome()
 	start := time.Now()
-	stdout, err := fn(runCtx, deps{exec: realExec, listDir: listDir, exists: pathExists, home: home})
+	stdout, err := fn(runCtx, deps{exec: realExec, listDir: listDir, exists: pathExists, readHead: readHead, home: home})
 	res := Result{Stdout: stdout, Duration: time.Since(start)}
 	if out != nil {
 		io.WriteString(out, stdout)
@@ -85,6 +86,20 @@ func listDir(dir string) ([]string, error) {
 	}
 	sort.Strings(names)
 	return names, nil
+}
+
+func readHead(p string, n int) ([]byte, error) {
+	f, err := os.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	buf := make([]byte, n)
+	m, err := io.ReadFull(f, buf)
+	if err == io.ErrUnexpectedEOF || err == io.EOF {
+		err = nil
+	}
+	return buf[:m], err
 }
 
 func pathExists(p string) bool {

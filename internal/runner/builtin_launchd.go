@@ -96,6 +96,12 @@ func launchdRow(ctx context.Context, d deps, cache map[string]signInfo, kind, pl
 		// Scripts carry no signature; the finding is the location and that a script runs at all.
 		return row(kind, label, plist, target, "script", "-", "-", "-", strings.Join(flags, ","))
 	}
+	if d.readHead != nil {
+		if head, err := d.readHead(target, 2); err == nil && string(head) == "#!" {
+			// A script run directly through its shebang: unsigned by nature, so treat it as a script.
+			return row(kind, label, plist, target, "script", "-", "-", "-", strings.Join(append(flags, "shebang"), ","))
+		}
+	}
 	si, ok := cache[target]
 	if !ok {
 		si = inspectSignature(ctx, d, target)
@@ -172,20 +178,33 @@ type signInfo struct {
 	State        string // apple, developer-id, adhoc, unsigned, other-signed, unreadable
 	Team         string
 	Signer       string
-	Notarization string // notarized, developer-id, apple, rejected, app-store, unknown
+	Notarization string // notarized, not-notarized, apple, unknown, or - when not applicable
 }
 
 func inspectSignature(ctx context.Context, d deps, target string) signInfo {
 	out, errOut, code, err := d.exec(ctx, "/usr/bin/codesign", "-dvv", "--", target)
 	if err != nil {
-		return signInfo{State: "unreadable", Notarization: "unknown"}
+		return signInfo{State: "unreadable", Team: "-", Signer: "-", Notarization: "unknown"}
 	}
 	si := parseCodesign(out+"\n"+errOut, code)
-	so, se, _, err := d.exec(ctx, "/usr/sbin/spctl", "--assess", "--type", "execute", "-vv", "--", target)
-	if err == nil {
-		si.Notarization = parseSpctl(so + "\n" + se)
-	} else {
-		si.Notarization = "unknown"
+	si.Notarization = "-"
+	switch si.State {
+	case "apple":
+		si.Notarization = "apple"
+	case "developer-id":
+		// spctl only assesses app bundles, so ask codesign whether a notarization ticket satisfies the
+		// built-in "notarized" requirement instead.
+		_, verr, c, err := d.exec(ctx, "/usr/bin/codesign", "--verify", "--test-requirement==notarized", "--", target)
+		switch {
+		case err != nil:
+			si.Notarization = "unknown"
+		case c == 0:
+			si.Notarization = "notarized"
+		case strings.Contains(strings.ToLower(verr), "syntax"):
+			si.Notarization = "unknown" // requirement not understood on this macOS
+		default:
+			si.Notarization = "not-notarized"
+		}
 	}
 	return si
 }
@@ -221,7 +240,7 @@ func parseCodesign(out string, code int) signInfo {
 		si.Signer = "-"
 	case hasPrefixAny(authorities, "Developer ID Application"):
 		si.State = "developer-id"
-	case onlyApple(authorities):
+	case isApplePlatform(authorities, si.Team):
 		si.State = "apple"
 	}
 	return si
@@ -236,41 +255,18 @@ func hasPrefixAny(xs []string, prefix string) bool {
 	return false
 }
 
-// applePlatformChain is the certificate chain of Apple's own platform binaries. Developer, App Store
-// and Mac App Store certificates chain through other Apple authorities and are deliberately excluded.
-var applePlatformChain = map[string]bool{
-	"Software Signing":                           true,
-	"Apple Code Signing Certification Authority": true,
-	"Apple Root CA":                              true,
-	"Apple Mac OS Application Signing":           true,
-}
-
-// onlyApple reports whether every certificate in the chain belongs to Apple's platform signing.
-func onlyApple(auth []string) bool {
-	if len(auth) == 0 {
+// isApplePlatform reports whether a signing chain is Apple's own platform signing: it ends at
+// Apple Root CA, carries no team identifier, and has no developer certificate in it. Developer ID,
+// Apple Development and App Store certificates all name "Developer" in their chain. The leaf name
+// differs between macOS releases ("Software Signing", "macOS Software Signing"), so it is not matched.
+func isApplePlatform(auth []string, team string) bool {
+	if len(auth) == 0 || team != "-" || auth[len(auth)-1] != "Apple Root CA" {
 		return false
 	}
 	for _, a := range auth {
-		if !applePlatformChain[a] {
+		if strings.Contains(a, "Developer") {
 			return false
 		}
 	}
 	return true
-}
-
-// parseSpctl classifies `spctl --assess --type execute -vv` output.
-func parseSpctl(out string) string {
-	switch {
-	case strings.Contains(out, "source=Notarized Developer ID"):
-		return "notarized"
-	case strings.Contains(out, "source=Developer ID"):
-		return "developer-id"
-	case strings.Contains(out, "source=Apple System"):
-		return "apple"
-	case strings.Contains(out, "source=Mac App Store"):
-		return "app-store"
-	case strings.Contains(out, "rejected"):
-		return "rejected"
-	}
-	return "unknown"
 }

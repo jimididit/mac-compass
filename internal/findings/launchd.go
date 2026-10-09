@@ -97,6 +97,8 @@ func summaryBucket(it launchItem) string {
 		return "Apple"
 	case it.State == "developer-id" && it.Notarization == "notarized":
 		return "Developer ID, notarized"
+	case it.State == "developer-id" && it.Notarization == "unknown":
+		return "Developer ID, notarization unknown"
 	case it.State == "developer-id":
 		return "Developer ID, not notarized"
 	case it.State == "other-signed":
@@ -107,7 +109,7 @@ func summaryBucket(it launchItem) string {
 
 func summaryLine(counts map[string]int) string {
 	var parts []string
-	for _, k := range []string{"Apple", "Developer ID, notarized", "Developer ID, not notarized", "other signature", "adhoc", "unsigned", "script", "missing", "unreadable", "no-program"} {
+	for _, k := range []string{"Apple", "Developer ID, notarized", "Developer ID, not notarized", "Developer ID, notarization unknown", "other signature", "adhoc", "unsigned", "script", "missing", "unreadable", "no-program"} {
 		if n := counts[k]; n > 0 {
 			parts = append(parts, fmt.Sprintf("%d %s", n, k))
 		}

