@@ -101,6 +101,9 @@ var compareCmd = &cobra.Command{
 		}
 		rep.Summarize()
 		red.Report(&rep)
+		if err := writeExtraReports(rep); err != nil {
+			return err
+		}
 		if jsonOutput {
 			if err := output.WriteJSON(cmd.OutOrStdout(), rep); err != nil {
 				return err

@@ -56,6 +56,7 @@ type Input struct {
 	Report       output.Report
 	Snapshot     baseline.Snapshot
 	FindingsText string
+	HTML         []byte // optional rendered report, stored as report.html
 	Redact       func(string) string
 }
 
@@ -107,6 +108,11 @@ func Write(dir string, in Input) (Manifest, string, error) {
 	}
 	if err := put("findings.txt", []byte(redact(in.FindingsText))); err != nil {
 		return Manifest{}, "", err
+	}
+	if len(in.HTML) > 0 {
+		if err := put("report.html", in.HTML); err != nil {
+			return Manifest{}, "", err
+		}
 	}
 	seen := map[string]int{}
 	for _, sec := range in.Report.Sections {

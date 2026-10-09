@@ -188,3 +188,39 @@ func TestCollectNeedsMacOS(t *testing.T) {
 		t.Error("collect must refuse to run off macOS")
 	}
 }
+
+func TestWriteExtraReports(t *testing.T) {
+	dir := t.TempDir()
+	htmlPath, sarifPath = filepath.Join(dir, "r.html"), filepath.Join(dir, "r.sarif")
+	defer func() { htmlPath, sarifPath = "", "" }()
+	rep := output.Report{
+		Tool: output.ToolInfo{Name: "mac-compass", Version: "t"},
+		Findings: []output.Finding{
+			{ID: "triage.sip", CheckID: "triage.sip", Status: output.StatusFail, Severity: output.SeverityHigh, Title: "SIP is off"},
+		},
+	}
+	rep.Summarize()
+	if err := writeExtraReports(rep); err != nil {
+		t.Fatal(err)
+	}
+	h, _ := os.ReadFile(htmlPath)
+	s, _ := os.ReadFile(sarifPath)
+	if !strings.Contains(string(h), "SIP is off") || !strings.Contains(string(s), `"version": "2.1.0"`) || !strings.Contains(string(s), "triage.sip") {
+		t.Errorf("reports not written correctly:\n%s\n%s", h, s)
+	}
+	if runtime.GOOS != "windows" {
+		for _, p := range []string{htmlPath, sarifPath} {
+			if info, _ := os.Stat(p); info.Mode().Perm()&0o077 != 0 {
+				t.Errorf("%s must be private: %v", p, info.Mode())
+			}
+		}
+	}
+	htmlPath = filepath.Join(dir, "no-such-dir", "r.html")
+	if err := writeExtraReports(rep); err == nil || !strings.Contains(err.Error(), "--html") {
+		t.Errorf("a write failure must name the flag: %v", err)
+	}
+	htmlPath, sarifPath = "", ""
+	if err := writeExtraReports(rep); err != nil {
+		t.Errorf("no flags, nothing to do: %v", err)
+	}
+}

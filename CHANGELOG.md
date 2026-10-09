@@ -4,6 +4,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+- `--html` writes a self-contained HTML report (no scripts, no network requests) and `--sarif` writes SARIF 2.1.0;
+  `collect` now stores `report.html` in the evidence bundle.
+
 ## [0.3.0] - 2026-10-09
 
 ### Added
