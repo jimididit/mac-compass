@@ -6,14 +6,14 @@ checks:
   - section: triage
     name: SIP status
     description: Check System Integrity Protection status; expected "enabled"
-    command: csrutil
+    command: /usr/bin/csrutil
     args: [status]
     sudo: false
     vm_safe: true
   - section: triage
     name: Gatekeeper status
     description: Verify Gatekeeper (assessments) is enabled
-    command: spctl
+    command: /usr/sbin/spctl
     args: [--status]
     sudo: false
     vm_safe: true
@@ -23,26 +23,13 @@ checks:
     script: kextstat | grep -v com.apple
     sudo: false
     vm_safe: true
+    ok_exit: [1]
   - section: triage
     name: All loaded KEXTs (detailed)
     description: List all loaded kernel extensions with details
-    command: kextstat
+    command: /usr/sbin/kextstat
     args: [-l]
     sudo: false
-    vm_safe: true
-  - section: triage
-    name: KEXT cache (prelinked kernel)
-    description: Check kernel extension signing/cache
-    command: kextcache
-    args: [-system-prelinked-kernel]
-    sudo: true
-    vm_safe: true
-  - section: triage
-    name: KEXT cache (system caches)
-    description: Check system kext caches
-    command: kextcache
-    args: [-system-caches]
-    sudo: true
     vm_safe: true
   - section: triage
     name: EFI integrity check
@@ -55,23 +42,23 @@ checks:
   - section: triage
     name: LaunchDaemons
     description: Quick check /Library/LaunchDaemons/
-    command: ls
+    command: /bin/ls
     args: [-la, /Library/LaunchDaemons/]
-    sudo: true
+    sudo: false
     vm_safe: true
   - section: triage
     name: LaunchAgents (system)
     description: Quick check /Library/LaunchAgents/
-    command: ls
+    command: /bin/ls
     args: [-la, /Library/LaunchAgents/]
-    sudo: true
+    sudo: false
     vm_safe: true
 
   # --- 2. Process & Memory ---
   - section: processes
     name: All processes (full)
     description: List all running processes with full details
-    command: ps
+    command: /bin/ps
     args: [auxww]
     sudo: false
     vm_safe: true
@@ -90,7 +77,7 @@ checks:
   - section: processes
     name: Listening TCP
     description: Processes with listening TCP ports
-    command: lsof
+    command: /usr/sbin/lsof
     args: [-i, TCP, -s, TCP:LISTEN, -n, -P]
     sudo: true
     vm_safe: true
@@ -100,12 +87,13 @@ checks:
     script: launchctl print system | grep DYLD
     sudo: true
     vm_safe: true
+    ok_exit: [1]
 
   # --- 3. Kernel & Rootkit ---
   - section: kernel
     name: Loaded KEXTs
     description: List all loaded kernel extensions
-    command: kextstat
+    command: /usr/sbin/kextstat
     args: []
     sudo: false
     vm_safe: true
@@ -115,17 +103,18 @@ checks:
     script: kextstat | grep -v "com.apple" | grep -v "com.intel"
     sudo: false
     vm_safe: true
+    ok_exit: [1]
   - section: kernel
     name: System extensions
     description: Modern system extensions (replacement for KEXTs)
-    command: systemextensionsctl
+    command: /usr/bin/systemextensionsctl
     args: [list]
     sudo: false
     vm_safe: true
   - section: kernel
     name: NVRAM boot-args
     description: Check boot-args for suspicious modifications
-    command: nvram
+    command: /usr/sbin/nvram
     args: [boot-args]
     sudo: false
     vm_safe: true
@@ -142,16 +131,16 @@ checks:
   - section: persistence
     name: LaunchDaemons (full)
     description: System-wide LaunchDaemons
-    command: ls
+    command: /bin/ls
     args: [-lah, /Library/LaunchDaemons/]
-    sudo: true
+    sudo: false
     vm_safe: true
   - section: persistence
     name: System LaunchDaemons
     description: /System/Library/LaunchDaemons/
-    command: ls
+    command: /bin/ls
     args: [-lah, /System/Library/LaunchDaemons/]
-    sudo: true
+    sudo: false
     vm_safe: true
   - section: persistence
     name: LaunchAgents (user)
@@ -162,28 +151,29 @@ checks:
   - section: persistence
     name: launchctl list (system)
     description: Loaded system services
-    command: launchctl
+    command: /bin/launchctl
     args: [list]
     sudo: true
     vm_safe: true
   - section: persistence
     name: Login items
     description: Per-user login items
-    command: osascript
+    command: /usr/bin/osascript
     args: [-e, 'tell application "System Events" to get the name of every login item']
     sudo: false
     vm_safe: true
   - section: persistence
     name: Cron tabs (user)
     description: Current user crontab
-    command: crontab
+    command: /usr/bin/crontab
     args: [-l]
     sudo: false
     vm_safe: true
+    ok_exit: [1]
   - section: persistence
     name: Periodic daily
     description: /etc/periodic/daily/
-    command: ls
+    command: /bin/ls
     args: [-la, /etc/periodic/daily/]
     sudo: false
     vm_safe: true
@@ -192,14 +182,14 @@ checks:
   - section: network
     name: Listening TCP
     description: All listening TCP ports
-    command: lsof
+    command: /usr/sbin/lsof
     args: [-iTCP, -sTCP:LISTEN, -n, -P]
     sudo: true
     vm_safe: true
   - section: network
     name: Listening UDP
     description: UDP listeners
-    command: lsof
+    command: /usr/sbin/lsof
     args: [-iUDP, -n, -P]
     sudo: true
     vm_safe: true
@@ -213,14 +203,14 @@ checks:
   - section: network
     name: DNS config
     description: Current DNS configuration
-    command: scutil
+    command: /usr/sbin/scutil
     args: [--dns]
     sudo: false
     vm_safe: true
   - section: network
     name: resolv.conf
     description: /etc/resolv.conf
-    command: cat
+    command: /bin/cat
     args: [/etc/resolv.conf]
     sudo: false
     vm_safe: true
@@ -229,14 +219,14 @@ checks:
   - section: security-tools
     name: Gatekeeper status
     description: spctl status
-    command: spctl
+    command: /usr/sbin/spctl
     args: [--status]
     sudo: false
     vm_safe: true
   - section: security-tools
     name: FileVault status
     description: Disk encryption status
-    command: fdesetup
+    command: /usr/bin/fdesetup
     args: [status]
     sudo: true
     vm_safe: true
@@ -255,10 +245,11 @@ checks:
     script: launchctl list | grep -i security
     sudo: true
     vm_safe: true
+    ok_exit: [1]
   - section: advanced
     name: System extensions list
     description: Loaded system extensions
-    command: systemextensionsctl
+    command: /usr/bin/systemextensionsctl
     args: [list]
     sudo: false
     vm_safe: true
@@ -267,7 +258,7 @@ checks:
   - section: harden
     name: Software update list
     description: Available updates
-    command: softwareupdate
+    command: /usr/sbin/softwareupdate
     args: [-l]
     sudo: false
     vm_safe: true

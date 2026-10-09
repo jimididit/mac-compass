@@ -1,14 +1,23 @@
 package catalog
 
 import (
+	"bytes"
 	"embed"
+	"errors"
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 //go:embed checks.yaml
 var catalogFS embed.FS
+
+// KnownSections lists the section ids a check may use.
+var KnownSections = []string{
+	"triage", "processes", "kernel", "persistence",
+	"network", "security-tools", "advanced", "harden",
+}
 
 // Check represents a single runnable check.
 type Check struct {
@@ -21,6 +30,22 @@ type Check struct {
 	Sudo             bool     `yaml:"sudo"`
 	VMSafe           bool     `yaml:"vm_safe"`           // Safe to run in VM
 	RequiresHardware bool     `yaml:"requires_hardware"` // T2/Secure Enclave etc.
+	// OKExit lists exit codes (besides 0) that mean the check ran fine, e.g. 1 for
+	// "grep found nothing" or "crontab: no crontab for user".
+	OKExit []int `yaml:"ok_exit"`
+}
+
+// ExitOK reports whether code is an acceptable exit status for the check.
+func (c Check) ExitOK(code int) bool {
+	if code == 0 {
+		return true
+	}
+	for _, ok := range c.OKExit {
+		if ok == code {
+			return true
+		}
+	}
+	return false
 }
 
 // Catalog is the in-memory check catalog.
@@ -28,17 +53,59 @@ type Catalog struct {
 	Checks []Check `yaml:"checks"`
 }
 
-// Load reads and parses the embedded checks.yaml.
+// Load reads, parses and validates the embedded checks.yaml.
 func Load() (*Catalog, error) {
 	data, err := catalogFS.ReadFile("checks.yaml")
 	if err != nil {
 		return nil, fmt.Errorf("read catalog: %w", err)
 	}
+	return Parse(data)
+}
+
+// Parse decodes catalog YAML strictly (unknown keys are errors) and validates it.
+func Parse(data []byte) (*Catalog, error) {
 	var c Catalog
-	if err := yaml.Unmarshal(data, &c); err != nil {
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	if err := dec.Decode(&c); err != nil {
 		return nil, fmt.Errorf("parse catalog: %w", err)
 	}
+	if err := c.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid catalog: %w", err)
+	}
 	return &c, nil
+}
+
+// Validate checks every entry for structural problems.
+func (c *Catalog) Validate() error {
+	known := make(map[string]bool, len(KnownSections))
+	for _, s := range KnownSections {
+		known[s] = true
+	}
+	seen := make(map[string]bool)
+	var errs []error
+	for i, ch := range c.Checks {
+		where := fmt.Sprintf("check #%d (%q)", i+1, ch.Name)
+		switch {
+		case strings.TrimSpace(ch.Name) == "":
+			errs = append(errs, fmt.Errorf("check #%d: empty name", i+1))
+			continue
+		case !known[ch.Section]:
+			errs = append(errs, fmt.Errorf("%s: unknown section %q", where, ch.Section))
+		}
+		if (ch.Command == "") == (ch.Script == "") {
+			errs = append(errs, fmt.Errorf("%s: exactly one of command or script is required", where))
+		}
+		if ch.Script != "" && len(ch.Args) > 0 {
+			errs = append(errs, fmt.Errorf("%s: args set together with script", where))
+		}
+		key := ch.Section + "/" + ch.Name
+		if seen[key] {
+			errs = append(errs, fmt.Errorf("%s: duplicate name in section %q", where, ch.Section))
+		}
+		seen[key] = true
+	}
+	return errors.Join(errs...)
 }
 
 // BySection returns checks for the given section id (e.g. "triage", "processes").

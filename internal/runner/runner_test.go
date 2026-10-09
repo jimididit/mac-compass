@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"runtime"
 	"strings"
@@ -142,5 +143,101 @@ func TestRunCheckCapture_VMModeSkipsHardware(t *testing.T) {
 	}
 	if stdout != "" || stderr != "" {
 		t.Errorf("skipped check should return empty output; got stdout=%q stderr=%q", stdout, stderr)
+	}
+}
+
+func skipNonUnix(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("skipping exec test on non-Unix OS")
+	}
+}
+
+func TestRun_OKExit(t *testing.T) {
+	skipNonUnix(t)
+	opts := DefaultOptions()
+	opts.Timeout = 5 * time.Second
+
+	ch := catalog.Check{Section: "test", Name: "nomatch", Script: "echo hi | grep -v hi"}
+	if res := Run(context.Background(), ch, opts, nil, nil); res.Err == nil || res.ExitCode != 1 {
+		t.Fatalf("exit 1 without ok_exit should fail; got err=%v code=%d", res.Err, res.ExitCode)
+	}
+	ch.OKExit = []int{1}
+	if res := Run(context.Background(), ch, opts, nil, nil); res.Err != nil {
+		t.Fatalf("exit 1 with ok_exit [1] should pass; got %v", res.Err)
+	}
+	ch.Script = "exit 2"
+	if res := Run(context.Background(), ch, opts, nil, nil); res.Err == nil {
+		t.Fatal("exit 2 not in ok_exit should fail")
+	}
+}
+
+func TestRun_SkipSudoIsSkipped(t *testing.T) {
+	ch := catalog.Check{Section: "test", Name: "sudo", Command: "true", Sudo: true}
+	opts := DefaultOptions()
+	opts.SkipSudo = true
+	res := Run(context.Background(), ch, opts, nil, nil)
+	if !res.Skipped || !errors.Is(res.Err, ErrSkipped) {
+		t.Fatalf("want skipped with ErrSkipped; got %+v", res)
+	}
+}
+
+func TestRun_TimeoutKillsPipeline(t *testing.T) {
+	skipNonUnix(t)
+	ch := catalog.Check{Section: "test", Name: "hang", Script: "sleep 30 | cat"}
+	opts := DefaultOptions()
+	opts.Timeout = 300 * time.Millisecond
+
+	start := time.Now()
+	res := Run(context.Background(), ch, opts, nil, nil)
+	if res.Err == nil || !strings.Contains(res.Err.Error(), "timeout") {
+		t.Fatalf("want timeout error; got %v", res.Err)
+	}
+	if elapsed := time.Since(start); elapsed > 10*time.Second {
+		t.Fatalf("timeout took %v; pipeline children not reaped", elapsed)
+	}
+}
+
+func TestRun_ScrubbedEnv(t *testing.T) {
+	skipNonUnix(t)
+	t.Setenv("DYLD_INSERT_LIBRARIES", "/tmp/evil.dylib")
+	t.Setenv("PATH", "/tmp/evil:"+os.Getenv("PATH"))
+	ch := catalog.Check{Section: "test", Name: "env", Script: "echo \"$PATH|$DYLD_INSERT_LIBRARIES\""}
+	opts := DefaultOptions()
+	opts.Timeout = 5 * time.Second
+
+	res := Run(context.Background(), ch, opts, nil, nil)
+	if res.Err != nil {
+		t.Fatal(res.Err)
+	}
+	if got := strings.TrimSpace(res.Stdout); got != safePath+"|" {
+		t.Errorf("env not scrubbed: %q", got)
+	}
+}
+
+func TestRun_StreamsAndCaptures(t *testing.T) {
+	skipNonUnix(t)
+	var out bytes.Buffer
+	ch := catalog.Check{Section: "test", Name: "echo", Script: "echo hi"}
+	opts := DefaultOptions()
+	opts.Timeout = 5 * time.Second
+	res := Run(context.Background(), ch, opts, &out, nil)
+	if res.Stdout != "hi\n" || out.String() != "hi\n" {
+		t.Errorf("captured=%q streamed=%q", res.Stdout, out.String())
+	}
+}
+
+func TestExpandUserHome_OnlyWordLeading(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip(err)
+	}
+	got, err := ExpandUserHome(`ls ~/x; grep 'a~b' f; echo "~/y"; ls ~`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `ls ` + home + `/x; grep 'a~b' f; echo "` + home + `/y"; ls ` + home
+	if got != want {
+		t.Errorf("got  %q\nwant %q", got, want)
 	}
 }

@@ -1,0 +1,59 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go test -race ./...
+
+  macos-run:
+    name: real macOS run (arm64 runner)
+    runs-on: macos-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go build -o mac-compass .
+      - name: run-all (JSON, VM mode)
+        # Failing checks are data, not CI failures; the artifact is the point.
+        run: |
+          sw_vers | tee sw_vers.txt
+          uname -m | tee uname.txt
+          sudo ./mac-compass run-all -y --vm --json > run-all.json || echo "exit=$?"
+          test -s run-all.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-run-all
+          path: |
+            run-all.json
+            sw_vers.txt
+            uname.txt
+
+  vuln:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...
