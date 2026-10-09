@@ -91,10 +91,17 @@ These work on the root command and on section subcommands:
 | `--timeout <duration>` | Time limit per check (default: 90s). Example: `--timeout 30s` |
 | `--json` | Output results as JSON instead of plain text |
 | `--report <path>` | Append human-readable output to a file (ignored when using `--json`) |
+| `--fail-on <severity>` | Exit `2` if any finding is at or above `info`, `low`, `medium`, `high` or `critical` |
+
+### Findings
+
+After the checks run, mac-compass interprets the output and lists findings, most severe first. Each is `pass`, `fail` (with a severity and a fix), `info`, or `error` (the check could not run). Checks without an evaluator still show raw output but produce no finding.
+
+`--json` emits one report object (`schema_version` 1): tool and host metadata (macOS version/build, arch), `sections` with every check's raw result, `findings`, and a `summary`. Every check has a stable `id` such as `triage.sip`.
 
 ### Exit status and safety
 
-- Exit `0`: every check ran (skipped checks do not count as failures). Exit `1`: at least one check failed or timed out.
+- Exit `0`: every check ran (skipped checks do not count as failures) and no `--fail-on` threshold was met. Exit `1`: at least one check failed or timed out. Exit `2`: a finding met `--fail-on`.
 - Checks are read-only. Each runs by absolute path with a fixed `PATH` and no `DYLD_*`/`LD_*` variables, so a poisoned environment cannot shadow system tools.
 - Some commands treat a non-zero exit as normal (for example `grep` with no match); the catalog marks these with `ok_exit`.
 - `--report` files are created with mode `0600`.

@@ -1,0 +1,50 @@
+{
+    AutoUpdate = 0;
+    AutoUpdateRestartRequired = 0;
+    AutomaticDownload = 0;
+    AutomaticallyInstallMacOSUpdates = 0;
+    ConfigDataInstall = 0;
+    CriticalUpdateInstall = 0;
+    FirstOfferDateDictionary =     {
+        "MSU_UPDATE_24G830_patch_15.7.9_minor" = "2026-08-31 04:02:33 +0000";
+        "MSU_UPDATE_24H32_patch_15.8.1_minor" = "2026-10-09 14:57:51 +0000";
+        "MSU_UPDATE_25G83_patch_26.6.2_major" = "2026-08-31 04:02:33 +0000";
+        "MSU_UPDATE_26A434_patch_27.0.1_major" = "2026-10-09 14:57:51 +0000";
+    };
+    LastAttemptBuildVersion = "15.7.9 (24G830)";
+    LastAttemptSystemVersion = "15.7.9 (24G830)";
+    LastBackgroundSuccessfulDate = "2026-09-07 03:50:32 +0000";
+    LastCollectedLoginCredentialDate = "2026-08-31 04:21:21 +0000";
+    LastFullSuccessfulDate = "2026-10-09 14:57:42 +0000";
+    LastRecommendedMajorOSBundleIdentifier = "";
+    LastResultCode = 0;
+    LastSessionSuccessful = 1;
+    LastSuccessfulBackgroundMSUScanDate = "2026-09-07 03:50:33 +0000";
+    LastSuccessfulDate = "2026-10-09 14:57:42 +0000";
+    PrimaryLanguages =     (
+        en,
+        "en-US"
+    );
+    RecommendedUpdates =     (
+                {
+            "Display Name" = "macOS Sequoia 15.8.1";
+            "Display Version" = "15.8.1";
+            Identifier = "MSU_UPDATE_24H32_patch_15.8.1_minor";
+            MobileSoftwareUpdate = 1;
+            "Product Key" = "MSU_UPDATE_24H32_patch_15.8.1_minor";
+        },
+                {
+            "Display Name" = "macOS 27.0.1";
+            "Display Version" = "27.0.1";
+            Identifier = "MSU_UPDATE_26A434_patch_27.0.1_major";
+            MobileSoftwareUpdate = 1;
+            "Product Key" = "MSU_UPDATE_26A434_patch_27.0.1_major";
+        },
+                {
+            "Display Name" = Safari;
+            "Display Version" = "27.0";
+            Identifier = "Safari27.0SequoiaAuto";
+            "Product Key" = "142-23583";
+        }
+    );
+}

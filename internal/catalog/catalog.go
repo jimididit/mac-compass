@@ -5,6 +5,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -12,6 +13,8 @@ import (
 
 //go:embed checks.yaml
 var catalogFS embed.FS
+
+var idRe = regexp.MustCompile(`^[a-z0-9-]+\.[a-z0-9-]+$`)
 
 // KnownSections lists the section ids a check may use.
 var KnownSections = []string{
@@ -21,6 +24,7 @@ var KnownSections = []string{
 
 // Check represents a single runnable check.
 type Check struct {
+	ID               string   `yaml:"id"` // stable dotted id, e.g. "triage.sip"
 	Section          string   `yaml:"section"`
 	Name             string   `yaml:"name"`
 	Description      string   `yaml:"description"`
@@ -101,6 +105,7 @@ func (c *Catalog) Validate() error {
 		known[s] = true
 	}
 	seen := make(map[string]bool)
+	ids := make(map[string]bool)
 	var errs []error
 	for i, ch := range c.Checks {
 		where := fmt.Sprintf("check #%d (%q)", i+1, ch.Name)
@@ -123,6 +128,12 @@ func (c *Catalog) Validate() error {
 		if ch.Script != "" && len(ch.Args) > 0 {
 			errs = append(errs, fmt.Errorf("%s: args set together with script", where))
 		}
+		if !idRe.MatchString(ch.ID) {
+			errs = append(errs, fmt.Errorf("%s: id %q must look like section.slug (lowercase, digits, dashes)", where, ch.ID))
+		} else if ids[ch.ID] {
+			errs = append(errs, fmt.Errorf("%s: duplicate id %q", where, ch.ID))
+		}
+		ids[ch.ID] = true
 		key := ch.Section + "/" + ch.Name
 		if seen[key] {
 			errs = append(errs, fmt.Errorf("%s: duplicate name in section %q", where, ch.Section))

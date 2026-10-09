@@ -3,10 +3,64 @@ package output
 import (
 	"encoding/json"
 	"io"
+	"time"
 )
+
+// SchemaVersion is bumped when the JSON report layout changes incompatibly.
+const SchemaVersion = 1
+
+// Severity ranks a failed finding.
+type Severity string
+
+const (
+	SeverityInfo     Severity = "info"
+	SeverityLow      Severity = "low"
+	SeverityMedium   Severity = "medium"
+	SeverityHigh     Severity = "high"
+	SeverityCritical Severity = "critical"
+)
+
+// Rank orders severities; unknown values rank below info.
+func (s Severity) Rank() int {
+	switch s {
+	case SeverityInfo:
+		return 1
+	case SeverityLow:
+		return 2
+	case SeverityMedium:
+		return 3
+	case SeverityHigh:
+		return 4
+	case SeverityCritical:
+		return 5
+	}
+	return 0
+}
+
+// Status is the outcome of a finding.
+type Status string
+
+const (
+	StatusPass  Status = "pass"  // check ran and the setting is as expected
+	StatusFail  Status = "fail"  // check ran and found something worth attention (see Severity)
+	StatusInfo  Status = "info"  // informational, no judgement
+	StatusError Status = "error" // check could not run, so nothing can be concluded
+)
+
+// Finding is an interpreted result derived from one check's output.
+type Finding struct {
+	ID          string   `json:"id"`       // e.g. "triage.sip"
+	CheckID     string   `json:"check_id"` // catalog check that produced it
+	Status      Status   `json:"status"`
+	Severity    Severity `json:"severity,omitempty"` // only for StatusFail
+	Title       string   `json:"title"`
+	Detail      string   `json:"detail,omitempty"`
+	Remediation string   `json:"remediation,omitempty"`
+}
 
 // CheckResult is the result of running a single check.
 type CheckResult struct {
+	ID         string `json:"id"`
 	Section    string `json:"section"`
 	Name       string `json:"name"`
 	Ok         bool   `json:"ok"`
@@ -25,9 +79,85 @@ type SectionResult struct {
 	Checks  []CheckResult `json:"checks"`
 }
 
-// WriteJSON writes section results as JSON to w.
-func WriteJSON(w io.Writer, sections []SectionResult) error {
+// ToolInfo identifies the build that produced a report.
+type ToolInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// HostInfo describes the machine that was examined.
+type HostInfo struct {
+	Hostname     string `json:"hostname,omitempty"`
+	OS           string `json:"os"`
+	MacOSVersion string `json:"macos_version,omitempty"`
+	MacOSBuild   string `json:"macos_build,omitempty"`
+	Arch         string `json:"arch"`
+}
+
+// Summary counts findings by outcome.
+type Summary struct {
+	Pass            int              `json:"pass"`
+	Info            int              `json:"info"`
+	Error           int              `json:"error"`
+	FailBySeverity  map[Severity]int `json:"fail_by_severity"`
+	Fail            int              `json:"fail"`
+	HighestSeverity Severity         `json:"highest_severity,omitempty"`
+	ChecksOK        int              `json:"checks_ok"`
+	ChecksSkipped   int              `json:"checks_skipped"`
+	ChecksFailed    int              `json:"checks_failed"`
+}
+
+// Report is the complete JSON document for a run.
+type Report struct {
+	SchemaVersion int             `json:"schema_version"`
+	Tool          ToolInfo        `json:"tool"`
+	Host          HostInfo        `json:"host"`
+	StartedAt     time.Time       `json:"started_at"`
+	DurationMS    int64           `json:"duration_ms"`
+	SudoEnabled   bool            `json:"sudo_enabled"`
+	VMMode        bool            `json:"vm_mode"`
+	Sections      []SectionResult `json:"sections"`
+	Findings      []Finding       `json:"findings"`
+	Summary       Summary         `json:"summary"`
+}
+
+// Summarize fills Summary from sections and findings.
+func (r *Report) Summarize() {
+	s := Summary{FailBySeverity: map[Severity]int{}}
+	for _, sec := range r.Sections {
+		for _, c := range sec.Checks {
+			switch {
+			case c.Skipped:
+				s.ChecksSkipped++
+			case c.Ok:
+				s.ChecksOK++
+			default:
+				s.ChecksFailed++
+			}
+		}
+	}
+	for _, f := range r.Findings {
+		switch f.Status {
+		case StatusPass:
+			s.Pass++
+		case StatusInfo:
+			s.Info++
+		case StatusError:
+			s.Error++
+		case StatusFail:
+			s.Fail++
+			s.FailBySeverity[f.Severity]++
+			if f.Severity.Rank() > s.HighestSeverity.Rank() {
+				s.HighestSeverity = f.Severity
+			}
+		}
+	}
+	r.Summary = s
+}
+
+// WriteJSON writes the report as indented JSON to w.
+func WriteJSON(w io.Writer, r Report) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	return enc.Encode(sections)
+	return enc.Encode(r)
 }

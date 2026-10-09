@@ -57,8 +57,9 @@ jobs:
           {
             echo "### $(sw_vers -productName) $(sw_vers -productVersion) ($(uname -m)) on ${{ matrix.os }}"
             for f in run-all run-all-nosudo; do
-              echo "**$f**: $(jq '[.[].checks[]] | "\(map(select(.ok)) | length) ok, \(map(select(.skipped)) | length) skipped, \(map(select((.ok|not) and (.skipped|not))) | length) failed"' -r out/$f.json)"
-              jq -r '.[].checks[] | select((.ok|not) and (.skipped|not)) | "- FAIL \(.section)/\(.name): \(.error) \(.stderr|gsub("\n";" ")|.[0:120])"' out/$f.json
+              echo "**$f**: $(jq -r '.summary | "\(.checks_ok) ok, \(.checks_skipped) skipped, \(.checks_failed) failed checks; findings: \(.fail) fail, \(.pass) pass, \(.info) info, \(.error) error"' out/$f.json)"
+              jq -r '.sections[].checks[] | select((.ok|not) and (.skipped|not)) | "- CHECK FAILED \(.id): \(.error) \(.stderr|gsub("\n";" ")|.[0:120])"' out/$f.json
+              jq -r '.findings[] | select(.status=="fail") | "- \(.severity) \(.id): \(.title)"' out/$f.json
             done
           } | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7

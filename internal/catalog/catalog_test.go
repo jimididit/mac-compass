@@ -88,12 +88,12 @@ func TestParse_RejectsUnknownKeys(t *testing.T) {
 
 func TestValidate_Problems(t *testing.T) {
 	cases := map[string]string{
-		"no command":     "checks:\n  - {section: triage, name: a}\n",
-		"both":           "checks:\n  - {section: triage, name: a, command: /bin/true, script: 'true'}\n",
-		"bad section":    "checks:\n  - {section: nope, name: a, command: /bin/true}\n",
-		"empty name":     "checks:\n  - {section: triage, command: /bin/true}\n",
-		"duplicate":      "checks:\n  - {section: triage, name: a, command: /bin/true}\n  - {section: triage, name: a, command: /bin/true}\n",
-		"args on script": "checks:\n  - {section: triage, name: a, script: 'true', args: [x]}\n",
+		"no command":     "checks:\n  - {id: triage.a, section: triage, name: a}\n",
+		"both":           "checks:\n  - {id: triage.a, section: triage, name: a, command: /bin/true, script: 'true'}\n",
+		"bad section":    "checks:\n  - {id: triage.a, section: nope, name: a, command: /bin/true}\n",
+		"empty name":     "checks:\n  - {id: triage.a, section: triage, command: /bin/true}\n",
+		"duplicate":      "checks:\n  - {id: triage.a, section: triage, name: a, command: /bin/true}\n  - {id: triage.a, section: triage, name: a, command: /bin/true}\n",
+		"args on script": "checks:\n  - {id: triage.a, section: triage, name: a, script: 'true', args: [x]}\n",
 	}
 	for name, y := range cases {
 		if _, err := Parse([]byte(y)); err == nil {
@@ -155,7 +155,7 @@ func TestEmbeddedCatalog_NoDeprecatedTools(t *testing.T) {
 }
 
 func TestParse_BadArch(t *testing.T) {
-	if _, err := Parse([]byte("checks:\n  - {section: triage, name: a, command: /bin/true, arch: ppc}\n")); err == nil {
+	if _, err := Parse([]byte("checks:\n  - {id: triage.a, section: triage, name: a, command: /bin/true, arch: ppc}\n")); err == nil {
 		t.Fatal("bad arch should be rejected")
 	}
 }
@@ -173,7 +173,20 @@ func TestAppliesTo(t *testing.T) {
 }
 
 func TestParse_BadMacOSRange(t *testing.T) {
-	if _, err := Parse([]byte("checks:\n  - {section: triage, name: a, command: /bin/true, macos_min: 15, macos_max: 12}\n")); err == nil {
+	if _, err := Parse([]byte("checks:\n  - {id: triage.a, section: triage, name: a, command: /bin/true, macos_min: 15, macos_max: 12}\n")); err == nil {
 		t.Fatal("min > max should be rejected")
+	}
+}
+
+func TestValidate_IDs(t *testing.T) {
+	cases := map[string]string{
+		"missing id":   "checks:\n  - {section: triage, name: a, command: /bin/true}\n",
+		"bad id":       "checks:\n  - {id: Triage_A, section: triage, name: a, command: /bin/true}\n",
+		"duplicate id": "checks:\n  - {id: triage.a, section: triage, name: a, command: /bin/true}\n  - {id: triage.a, section: triage, name: b, command: /bin/true}\n",
+	}
+	for name, y := range cases {
+		if _, err := Parse([]byte(y)); err == nil {
+			t.Errorf("%s: expected validation error", name)
+		}
 	}
 }

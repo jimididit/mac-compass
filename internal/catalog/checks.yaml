@@ -8,14 +8,16 @@
 
 checks:
   # --- 1. Quick Triage ---
-  - section: triage
+  - id: triage.sip
+    section: triage
     name: SIP status
     description: Check System Integrity Protection status; expected "enabled"
     command: /usr/bin/csrutil
     args: [status]
     sudo: false
     vm_safe: true
-  - section: triage
+  - id: triage.sip-authenticated-root
+    section: triage
     name: SIP authenticated root
     description: Sealed system volume status; expected "enabled"
     command: /usr/bin/csrutil
@@ -24,14 +26,16 @@ checks:
     vm_safe: true
     macos_min: 11
     optional: true
-  - section: triage
+  - id: triage.gatekeeper
+    section: triage
     name: Gatekeeper status
     description: Verify Gatekeeper (assessments) is enabled
     command: /usr/sbin/spctl
     args: [--status]
     sudo: false
     vm_safe: true
-  - section: triage
+  - id: triage.kext-non-apple
+    section: triage
     name: Non-Apple kernel extensions
     description: Loaded kernel extensions not signed by Apple (kmutil; kextstat is deprecated)
     script: /usr/bin/kmutil showloaded | grep -v com.apple
@@ -39,14 +43,16 @@ checks:
     vm_safe: true
     macos_min: 11
     ok_exit: [1]
-  - section: triage
+  - id: triage.launchdaemons
+    section: triage
     name: LaunchDaemons
     description: Quick check /Library/LaunchDaemons/
     command: /bin/ls
     args: [-la, /Library/LaunchDaemons/]
     sudo: false
     vm_safe: true
-  - section: triage
+  - id: triage.launchagents-system
+    section: triage
     name: LaunchAgents (system)
     description: Quick check /Library/LaunchAgents/
     command: /bin/ls
@@ -55,26 +61,30 @@ checks:
     vm_safe: true
 
   # --- 2. Process & Memory ---
-  - section: processes
+  - id: processes.ps-all
+    section: processes
     name: All processes (full)
     description: List all running processes with full details
     command: /bin/ps
     args: [auxww]
     sudo: false
     vm_safe: true
-  - section: processes
+  - id: processes.high-cpu
+    section: processes
     name: High CPU processes
     description: Processes using >50% CPU
     script: ps aux | awk '$3 > 50 {print}'
     sudo: false
     vm_safe: true
-  - section: processes
+  - id: processes.high-memory
+    section: processes
     name: High memory processes
     description: Processes using >50% memory
     script: ps aux | awk '$4 > 50 {print}'
     sudo: false
     vm_safe: true
-  - section: processes
+  - id: processes.launchctl-dyld
+    section: processes
     name: System launchctl DYLD
     description: Check for dyld env vars (dylib injection) in system domain
     script: launchctl print system | grep DYLD
@@ -83,7 +93,8 @@ checks:
     ok_exit: [1]
 
   # --- 3. Kernel & Rootkit ---
-  - section: kernel
+  - id: kernel.kext-loaded
+    section: kernel
     name: Loaded kernel extensions
     description: All loaded kernel extensions (kmutil; kextstat is deprecated)
     command: /usr/bin/kmutil
@@ -91,14 +102,16 @@ checks:
     sudo: false
     vm_safe: true
     macos_min: 11
-  - section: kernel
+  - id: kernel.system-extensions
+    section: kernel
     name: System extensions
     description: Modern system extensions (replacement for KEXTs)
     command: /usr/bin/systemextensionsctl
     args: [list]
     sudo: false
     vm_safe: true
-  - section: kernel
+  - id: kernel.nvram-boot-args
+    section: kernel
     name: NVRAM boot-args
     description: Check boot-args for suspicious modifications
     command: /usr/sbin/nvram
@@ -106,7 +119,8 @@ checks:
     sudo: false
     vm_safe: true
     ok_exit: [1]
-  - section: kernel
+  - id: kernel.efi-integrity
+    section: kernel
     name: EFI integrity
     description: Firmware integrity check (Intel Macs only; removed on newer macOS)
     command: /usr/libexec/firmwarecheckers/eficheck/eficheck
@@ -118,34 +132,39 @@ checks:
     optional: true
 
   # --- 4. Persistence ---
-  - section: persistence
+  - id: persistence.system-launchdaemons
+    section: persistence
     name: System LaunchDaemons
     description: /System/Library/LaunchDaemons/
     command: /bin/ls
     args: [-lah, /System/Library/LaunchDaemons/]
     sudo: false
     vm_safe: true
-  - section: persistence
+  - id: persistence.launchagents-user
+    section: persistence
     name: LaunchAgents (user)
     description: User LaunchAgents
     script: ls -lah ~/Library/LaunchAgents/
     sudo: false
     vm_safe: true
-  - section: persistence
+  - id: persistence.launchctl-list
+    section: persistence
     name: launchctl list (system)
     description: Loaded system services
     command: /bin/launchctl
     args: [list]
     sudo: true
     vm_safe: true
-  - section: persistence
+  - id: persistence.login-items
+    section: persistence
     name: Login items
     description: Per-user login items
     command: /usr/bin/osascript
     args: [-e, 'tell application "System Events" to get the name of every login item']
     sudo: false
     vm_safe: true
-  - section: persistence
+  - id: persistence.crontab
+    section: persistence
     name: Cron tabs (user)
     description: Current user crontab
     command: /usr/bin/crontab
@@ -153,7 +172,8 @@ checks:
     sudo: false
     vm_safe: true
     ok_exit: [1]
-  - section: persistence
+  - id: persistence.periodic-daily
+    section: persistence
     name: Periodic daily
     description: /etc/periodic/daily/ (absent on newer macOS, e.g. 26; absence is normal)
     command: /bin/ls
@@ -163,35 +183,40 @@ checks:
     ok_exit: [1]
 
   # --- 5. Network ---
-  - section: network
+  - id: network.listening-tcp
+    section: network
     name: Listening TCP
     description: All listening TCP ports
     command: /usr/sbin/lsof
     args: [-iTCP, -sTCP:LISTEN, -n, -P]
     sudo: true
     vm_safe: true
-  - section: network
+  - id: network.listening-udp
+    section: network
     name: Listening UDP
     description: UDP listeners
     command: /usr/sbin/lsof
     args: [-iUDP, -n, -P]
     sudo: true
     vm_safe: true
-  - section: network
+  - id: network.firewall
+    section: network
     name: Firewall status
     description: Application firewall global state
     command: /usr/libexec/ApplicationFirewall/socketfilterfw
     args: [--getglobalstate]
     sudo: true
     vm_safe: true
-  - section: network
+  - id: network.dns
+    section: network
     name: DNS config
     description: Current DNS configuration
     command: /usr/sbin/scutil
     args: [--dns]
     sudo: false
     vm_safe: true
-  - section: network
+  - id: network.resolv-conf
+    section: network
     name: resolv.conf
     description: /etc/resolv.conf
     command: /bin/cat
@@ -200,7 +225,8 @@ checks:
     vm_safe: true
 
   # --- 6. Security tools ---
-  - section: security-tools
+  - id: security-tools.filevault
+    section: security-tools
     name: FileVault status
     description: Disk encryption status
     command: /usr/bin/fdesetup
@@ -209,7 +235,8 @@ checks:
     vm_safe: true
 
   # --- 7. Advanced ---
-  - section: advanced
+  - id: advanced.endpoint-security
+    section: advanced
     name: Endpoint security (launchctl)
     description: Security-related launchd services
     script: launchctl list | grep -i security
@@ -218,14 +245,16 @@ checks:
     ok_exit: [1]
 
   # --- 9. Harden (preventive) ---
-  - section: harden
+  - id: harden.softwareupdate-list
+    section: harden
     name: Software update list
     description: Available updates (contacts Apple)
     command: /usr/sbin/softwareupdate
     args: [-l]
     sudo: false
     vm_safe: true
-  - section: harden
+  - id: harden.auto-update-settings
+    section: harden
     name: Automatic update settings
     description: Software Update preferences (auto-check, auto-download, critical updates)
     command: /usr/bin/defaults

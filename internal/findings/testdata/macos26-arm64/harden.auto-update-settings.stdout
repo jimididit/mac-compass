@@ -1,0 +1,53 @@
+{
+    AutoUpdate = 0;
+    AutoUpdateRestartRequired = 0;
+    AutomaticDownload = 0;
+    AutomaticallyInstallMacOSUpdates = 0;
+    ConfigDataInstall = 0;
+    CriticalUpdateInstall = 0;
+    FirstOfferDateDictionary =     {
+        "MSU_UPDATE_25G241_patch_26.7.1_minor" = "2026-10-09 14:56:22 +0000";
+        "MSU_UPDATE_26A434_patch_27.0.1_major" = "2026-10-09 14:56:22 +0000";
+    };
+    LastAttemptBuildVersion = "26.6.2 (25G83)";
+    LastAttemptSystemVersion = "26.6.2 (25G83)";
+    LastFullSuccessfulDate = "2026-10-09 14:57:43 +0000";
+    LastRecommendedMajorOSBundleIdentifier = "";
+    LastResultCode = 0;
+    LastSessionSuccessful = 1;
+    LastSuccessfulDate = "2026-10-09 14:57:54 +0000";
+    PostSuccessfulMinorUpdatePostLogOutNotification = 0;
+    PrimaryLanguages =     (
+        en,
+        "en-US"
+    );
+    RecommendedUpdates =     (
+                {
+            "Display Name" = "macOS 27.0.1";
+            "Display Version" = "27.0.1";
+            Identifier = "MSU_UPDATE_26A434_patch_27.0.1_major";
+            MobileSoftwareUpdate = 1;
+            "Product Key" = "MSU_UPDATE_26A434_patch_27.0.1_major";
+        },
+                {
+            "Display Name" = "Command Line Tools for Xcode 27.0";
+            "Display Version" = "27.0";
+            Identifier = "Command Line Tools for Xcode 27.0";
+            "Product Key" = "082-83364";
+        },
+                {
+            "Display Name" = "macOS Tahoe 26.7.1";
+            "Display Version" = "26.7.1";
+            Identifier = "MSU_UPDATE_25G241_patch_26.7.1_minor";
+            MobileSoftwareUpdate = 1;
+            "Product Key" = "MSU_UPDATE_25G241_patch_26.7.1_minor";
+        },
+                {
+            "Display Name" = Safari;
+            "Display Version" = "27.0";
+            Identifier = "Safari27.0TahoeAuto";
+            "Product Key" = "047-48781";
+        }
+    );
+    SplatEnabled = 1;
+}
