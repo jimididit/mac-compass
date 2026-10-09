@@ -1,0 +1,4 @@
+127.0.0.1	localhost
+255.255.255.255	broadcasthost
+::1             localhost
+192.168.64.15 dsm12-be227-b049a126-837f-455b-829b-46244a97acce-F68D835991CB.local dsm12-be227-b049a126-837f-455b-829b-46244a97acce-F68D835991CB

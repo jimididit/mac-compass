@@ -262,3 +262,155 @@ checks:
     sudo: false
     vm_safe: true
     ok_exit: [1]
+
+  # --- 10. Accounts ---
+  - id: accounts.local-users
+    section: accounts
+    name: Local user accounts
+    description: Local accounts and their UIDs (an extra uid 0 account is a red flag)
+    command: /usr/bin/dscl
+    args: [., -list, /Users, UniqueID]
+    sudo: false
+    vm_safe: true
+  - id: accounts.admin-group
+    section: accounts
+    name: Admin group members
+    description: Accounts with administrator rights
+    command: /usr/bin/dscl
+    args: [., -read, /Groups/admin, GroupMembership]
+    sudo: false
+    vm_safe: true
+  - id: accounts.guest
+    section: accounts
+    name: Guest account
+    description: Whether the guest user is enabled at the login window
+    command: /usr/bin/defaults
+    args: [read, /Library/Preferences/com.apple.loginwindow, GuestEnabled]
+    sudo: false
+    vm_safe: true
+    ok_exit: [1]
+  - id: accounts.autologin
+    section: accounts
+    name: Automatic login
+    description: User that logs in automatically at boot, if any
+    command: /usr/bin/defaults
+    args: [read, /Library/Preferences/com.apple.loginwindow, autoLoginUser]
+    sudo: false
+    vm_safe: true
+    ok_exit: [1]
+  - id: accounts.ssh-authorized-keys
+    section: accounts
+    name: SSH authorized keys
+    description: Fingerprints of keys that can log in over SSH as this user
+    script: '[ -f ~/.ssh/authorized_keys ] && /usr/bin/ssh-keygen -lf ~/.ssh/authorized_keys'
+    sudo: false
+    vm_safe: true
+    ok_exit: [1]
+
+  # --- 4b. More persistence ---
+  - id: persistence.btm
+    section: persistence
+    name: Background task management
+    description: Login items and background items registered with the system (raw dump)
+    command: /usr/bin/sfltool
+    args: [dumpbtm]
+    sudo: true
+    vm_safe: true
+    macos_min: 13
+  - id: persistence.shell-rc
+    section: persistence
+    name: Shell startup files
+    description: SHA-256 of shell startup files (changes here run code at every shell)
+    script: /usr/bin/shasum -a 256 ~/.zshrc ~/.zprofile ~/.zshenv ~/.zlogin ~/.bash_profile ~/.bashrc ~/.profile /etc/zshrc /etc/zprofile /etc/zshenv /etc/profile /etc/bashrc 2>/dev/null
+    sudo: false
+    vm_safe: true
+    ok_exit: [1]
+  - id: persistence.login-hooks
+    section: persistence
+    name: Login and logout hooks
+    description: Deprecated loginwindow hooks that run a script as root at login or logout
+    script: defaults read /Library/Preferences/com.apple.loginwindow 2>/dev/null | grep -E 'LoginHook|LogoutHook'
+    sudo: false
+    vm_safe: true
+    ok_exit: [1]
+  - id: persistence.hosts
+    section: persistence
+    name: Hosts file entries
+    description: Non-comment lines in /etc/hosts (used to redirect domains)
+    script: grep -vE '^[[:space:]]*(#|$)' /etc/hosts
+    sudo: false
+    vm_safe: true
+    ok_exit: [1]
+  - id: persistence.sudoers-d
+    section: persistence
+    name: Sudoers drop-ins
+    description: Files in /etc/sudoers.d (a NOPASSWD file here is a classic privilege backdoor)
+    command: /bin/ls
+    args: [-1, /etc/sudoers.d]
+    sudo: false
+    vm_safe: true
+    ok_exit: [1]
+
+  # --- 5b. More network ---
+  - id: network.proxy
+    section: network
+    name: System proxy settings
+    description: Configured HTTP/HTTPS/SOCKS/PAC proxies (a proxy can intercept traffic)
+    command: /usr/sbin/scutil
+    args: [--proxy]
+    sudo: false
+    vm_safe: true
+  - id: network.established
+    section: network
+    name: Established TCP connections
+    description: Current outbound TCP connections with the owning process
+    command: /usr/sbin/lsof
+    args: [-iTCP, -sTCP:ESTABLISHED, -n, -P]
+    sudo: true
+    vm_safe: true
+    ok_exit: [1]
+
+  # --- 6b. More security tools ---
+  - id: security-tools.xprotect-version
+    section: security-tools
+    name: XProtect version
+    description: Version of Apple's built-in malware signatures
+    command: /usr/bin/defaults
+    args: [read, /Library/Apple/System/Library/CoreServices/XProtect.bundle/Contents/Info.plist, CFBundleShortVersionString]
+    sudo: false
+    vm_safe: true
+    ok_exit: [1]
+  - id: security-tools.profiles
+    section: security-tools
+    name: Configuration profiles
+    description: Installed configuration profiles (MDM, VPN, certificates, restrictions)
+    command: /usr/bin/profiles
+    args: [list]
+    sudo: true
+    vm_safe: true
+    ok_exit: [1]
+  - id: security-tools.mdm-enrollment
+    section: security-tools
+    name: MDM enrollment
+    description: Whether this Mac is enrolled in device management
+    command: /usr/bin/profiles
+    args: [status, -type, enrollment]
+    sudo: true
+    vm_safe: true
+    ok_exit: [1]
+  - id: security-tools.tcc-system
+    section: security-tools
+    name: Privacy grants (system)
+    description: Apps allowed Full Disk Access, Accessibility, Screen Recording or input monitoring (system-wide)
+    script: |
+      /usr/bin/sqlite3 -readonly "/Library/Application Support/com.apple.TCC/TCC.db" "select service||'|'||client||'|'||client_type from access where auth_value=2 and service in ('kTCCServiceSystemPolicyAllFiles','kTCCServiceAccessibility','kTCCServiceScreenCapture','kTCCServiceListenEvent','kTCCServicePostEvent','kTCCServiceEndpointSecurityClient')"
+    sudo: true
+    vm_safe: true
+  - id: security-tools.tcc-user
+    section: security-tools
+    name: Privacy grants (user)
+    description: Apps allowed Accessibility, Screen Recording or input monitoring for this user
+    script: |
+      /usr/bin/sqlite3 -readonly "~/Library/Application Support/com.apple.TCC/TCC.db" "select service||'|'||client||'|'||client_type from access where auth_value=2 and service in ('kTCCServiceSystemPolicyAllFiles','kTCCServiceAccessibility','kTCCServiceScreenCapture','kTCCServiceListenEvent','kTCCServicePostEvent','kTCCServiceEndpointSecurityClient')"
+    sudo: false
+    vm_safe: true

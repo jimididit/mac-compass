@@ -1,0 +1,11 @@
+kTCCServiceAccessibility|/bin/bash|1
+kTCCServiceAccessibility|/usr/bin/osascript|1
+kTCCServiceAccessibility|com.apple.Terminal|0
+kTCCServicePostEvent|/bin/bash|1
+kTCCServiceScreenCapture|/bin/bash|1
+kTCCServiceScreenCapture|/opt/hca/hosted-compute-agent|1
+kTCCServiceScreenCapture|/usr/bin/osascript|1
+kTCCServiceScreenCapture|/usr/local/opt/runner/provisioner/provisioner|1
+kTCCServiceScreenCapture|com.apple.Terminal|0
+kTCCServiceSystemPolicyAllFiles|/opt/hca/start_hca.sh|1
+kTCCServiceSystemPolicyAllFiles|/usr/local/opt/runner/runprovisioner.sh|1

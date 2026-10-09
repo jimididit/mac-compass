@@ -27,6 +27,8 @@ func TestChoiceToSubcommand(t *testing.T) {
 		{"10", "refs"},
 		{"refs", "refs"},
 		{"11", "run-all"},
+		{"12", "accounts"},
+		{"accounts", "accounts"},
 		{"run-all", "run-all"},
 		{"", ""},
 		{"unknown", ""},

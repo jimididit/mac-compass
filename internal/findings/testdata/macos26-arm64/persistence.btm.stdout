@@ -1,0 +1,262 @@
+========================
+ Records for UID -2 : FFFFEEEE-DDDD-CCCC-BBBB-AAAAFFFFFFFE
+========================
+
+ ServiceManagement migrated: true
+ LaunchServices registered: false
+
+ Items:
+
+ #1:
+                 UUID: 043CF99E-705F-47B0-BBDD-F456CE573961
+                 Name: (null)
+       Developer Name: (null)
+                 Type: developer (0x20)
+                Flags: [  ] (0)
+          Disposition: [disabled, allowed, not notified] (0x2)
+           Identifier: Unknown Developer
+                  URL: (null)
+           Generation: 0
+  Embedded Item Identifiers:
+    #1: 16.com.veertu.anka.addons.systemsetup
+
+ #2:
+                 UUID: 8C7E3172-E97F-4E0F-85AB-C50DDF244E9B
+                 Name: ankaupd.sh
+       Developer Name: (null)
+                 Type: legacy daemon (0x10010)
+                Flags: [ legacy ] (0x1)
+          Disposition: [enabled, allowed, not notified] (0x3)
+           Identifier: 16.com.veertu.anka.addons.ankaupd
+                  URL: file:///Library/LaunchDaemons/com.veertu.anka.addons.ankaupd.plist
+      Executable Path: /Library/Application Support/Veertu/Anka/addons/ankaupd.sh
+           Generation: 0
+    Parent Identifier: Unknown Developer
+
+ #3:
+                 UUID: CED46A6B-1FB3-4EAC-9905-CB4FC9F2FA6C
+                 Name: change_hostname.sh
+       Developer Name: (null)
+                 Type: legacy daemon (0x10010)
+                Flags: [ legacy ] (0x1)
+          Disposition: [enabled, allowed, notified] (0xb)
+           Identifier: 16.change-hostname
+                  URL: file:///Library/LaunchDaemons/change_hostname.plist
+      Executable Path: /usr/local/bin/change_hostname.sh
+           Generation: 1
+    Parent Identifier: Unknown Developer
+
+ #4:
+                 UUID: 36BBC9CF-4543-4C1F-8706-5C738AE542A5
+                 Name: launchctl
+       Developer Name: (null)
+                 Type: legacy daemon (0x10010)
+                Flags: [ legacy ] (0x1)
+          Disposition: [enabled, allowed, not notified] (0x3)
+           Identifier: 16.com.veertu.anka.addons.ssh
+                  URL: file:///Library/LaunchDaemons/com.veertu.anka.addons.ssh.plist
+      Executable Path: /bin/launchctl
+           Generation: 0
+    Parent Identifier: Unknown Developer
+
+ #5:
+                 UUID: CBC6D2B1-561A-49D9-A059-97F1F642E4A3
+                 Name: systemsetup
+       Developer Name: (null)
+                 Type: legacy daemon (0x10010)
+                Flags: [ legacy ] (0x1)
+          Disposition: [enabled, allowed, not notified] (0x3)
+           Identifier: 16.com.veertu.anka.addons.systemsetup
+                  URL: file:///Library/LaunchDaemons/com.veertu.anka.addons.systemsetup.plist
+      Executable Path: /usr/sbin/systemsetup
+           Generation: 0
+    Parent Identifier: Unknown Developer
+
+ #6:
+                 UUID: B6615C1D-96F1-4FB8-807D-7A8D1DBA54D5
+                 Name: Veertu Inc
+       Developer Name: Veertu Inc
+                 Type: developer (0x20)
+                Flags: [  ] (0)
+          Disposition: [disabled, allowed, not notified] (0x2)
+           Identifier: Veertu Inc
+                  URL: (null)
+           Generation: 0
+  Embedded Item Identifiers:
+    #1: 16.com.veertu.anka.addons.proxy
+
+ #7:
+                 UUID: 0B52F532-1C32-4592-8980-5C29507904C4
+                 Name: addonsd
+       Developer Name: Veertu Inc
+      Team Identifier: TT9FAWP6V4
+                 Type: legacy daemon (0x10010)
+                Flags: [ legacy ] (0x1)
+          Disposition: [enabled, allowed, not notified] (0x3)
+           Identifier: 16.com.veertu.anka.addons
+                  URL: file:///Library/LaunchDaemons/com.veertu.anka.addons.plist
+      Executable Path: /Library/Application Support/Veertu/Anka/addons/addonsd
+           Generation: 0
+    Parent Identifier: Veertu Inc
+
+ #8:
+                 UUID: DCDF1FDB-6CA9-4720-82C3-356F4E382DBC
+                 Name: proxyd
+       Developer Name: Veertu Inc
+      Team Identifier: TT9FAWP6V4
+                 Type: legacy daemon (0x10010)
+                Flags: [ legacy ] (0x1)
+          Disposition: [enabled, allowed, not notified] (0x3)
+           Identifier: 16.com.veertu.anka.addons.proxy
+                  URL: file:///Library/LaunchDaemons/com.veertu.anka.addons.proxy.plist
+      Executable Path: /Library/Application Support/Veertu/Anka/addons/proxyd
+           Generation: 0
+    Parent Identifier: Veertu Inc
+
+
+========================
+ Records for UID 0 : FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000
+========================
+
+ ServiceManagement migrated: false
+ LaunchServices registered: false
+
+ Items:
+
+ #1:
+                 UUID: 043CF99E-705F-47B0-BBDD-F456CE573961
+                 Name: (null)
+       Developer Name: (null)
+                 Type: developer (0x20)
+                Flags: [  ] (0)
+          Disposition: [disabled, allowed, not notified] (0x2)
+           Identifier: Unknown Developer
+                  URL: (null)
+           Generation: 1
+
+ #2:
+                 UUID: B6615C1D-96F1-4FB8-807D-7A8D1DBA54D5
+                 Name: Veertu Inc
+       Developer Name: Veertu Inc
+                 Type: developer (0x20)
+                Flags: [  ] (0)
+          Disposition: [disabled, allowed, not notified] (0x2)
+           Identifier: Veertu Inc
+                  URL: (null)
+           Generation: 2
+
+
+========================
+ Records for UID 501 : 19B516DA-02D2-4C58-A335-FA55B936BC06
+========================
+
+ ServiceManagement migrated: true
+ LaunchServices registered: true
+
+ Items:
+
+ #1:
+                 UUID: 4A54BC6E-5AD1-4A8A-B179-6DBD24C9D056
+                 Name: (null)
+       Developer Name: (null)
+                 Type: developer (0x20)
+                Flags: [  ] (0)
+          Disposition: [disabled, allowed, not notified] (0x2)
+           Identifier: Unknown Developer
+                  URL: (null)
+           Generation: 1
+
+ #2:
+                 UUID: A773111A-6E4B-4D89-BA7F-C305F1BA38F3
+                 Name: defaults
+       Developer Name: (null)
+                 Type: legacy agent (0x10008)
+                Flags: [ legacy ] (0x1)
+          Disposition: [enabled, allowed, not notified] (0x3)
+           Identifier: 8.com.veertu.anka.addons.locale
+                  URL: file:///Library/LaunchAgents/com.veertu.anka.addons.locale.plist
+      Executable Path: /usr/bin/defaults
+           Generation: 0
+    Parent Identifier: Unknown Developer
+
+ #3:
+                 UUID: 7C683F9A-9174-462D-9CA7-C9E16E57165C
+                 Name: defaults
+       Developer Name: (null)
+                 Type: legacy agent (0x10008)
+                Flags: [ legacy ] (0x1)
+          Disposition: [enabled, allowed, not notified] (0x3)
+           Identifier: 8.com.veertu.anka.addons.screenunsaver
+                  URL: file:///Library/LaunchAgents/com.veertu.anka.addons.screenunsaver.plist
+      Executable Path: /usr/bin/defaults
+           Generation: 0
+    Parent Identifier: Unknown Developer
+
+ #4:
+                 UUID: 99F027C5-321B-423C-BB37-4DB41FFC5A62
+                 Name: start_hca.sh
+       Developer Name: (null)
+                 Type: legacy agent (0x10008)
+                Flags: [ legacy ] (0x1)
+          Disposition: [enabled, allowed, notified] (0xb)
+           Identifier: 8.runner-provisioner
+                  URL: file:///Users/runner/Library/LaunchAgents/hca.plist
+      Executable Path: /opt/hca/start_hca.sh
+           Generation: 1
+    Parent Identifier: Unknown Developer
+
+ #5:
+                 UUID: 6BF2A193-C887-4975-9525-56386B3C672A
+                 Name: Veertu Inc
+       Developer Name: Veertu Inc
+                 Type: developer (0x20)
+                Flags: [  ] (0)
+          Disposition: [disabled, allowed, not notified] (0x2)
+           Identifier: Veertu Inc
+                  URL: (null)
+           Generation: 3
+
+ #6:
+                 UUID: 97027247-4163-40D9-8457-9D427402FBEA
+                 Name: ankacpd
+       Developer Name: Veertu Inc
+      Team Identifier: TT9FAWP6V4
+                 Type: legacy agent (0x10008)
+                Flags: [ legacy ] (0x1)
+          Disposition: [enabled, allowed, not notified] (0x3)
+           Identifier: 8.com.veertu.anka.addons.ankacp
+                  URL: file:///Library/LaunchAgents/com.veertu.anka.addons.ankacp.plist
+      Executable Path: /Library/Application Support/Veertu/Anka/addons/ankacpd
+           Generation: 0
+    Parent Identifier: Veertu Inc
+
+ #7:
+                 UUID: FFC929EC-CBF7-4FEA-9076-065070AF6F58
+                 Name: ankarund
+       Developer Name: Veertu Inc
+      Team Identifier: TT9FAWP6V4
+                 Type: legacy agent (0x10008)
+                Flags: [ legacy ] (0x1)
+          Disposition: [enabled, allowed, not notified] (0x3)
+           Identifier: 8.com.veertu.anka.addons.ankarun
+                  URL: file:///Library/LaunchAgents/com.veertu.anka.addons.ankarun.plist
+      Executable Path: /Library/Application Support/Veertu/Anka/addons/ankarund
+           Generation: 0
+    Parent Identifier: Veertu Inc
+
+ #8:
+                 UUID: D40ABF5E-6F4D-453E-87E2-30FDD6A810EA
+                 Name: copypaste
+       Developer Name: Veertu Inc
+      Team Identifier: TT9FAWP6V4
+                 Type: legacy agent (0x10008)
+                Flags: [ legacy ] (0x1)
+          Disposition: [enabled, allowed, not notified] (0x3)
+           Identifier: 8.com.veertu.anka.addons.copypaste
+                  URL: file:///Library/LaunchAgents/com.veertu.anka.addons.copypaste.plist
+      Executable Path: /Library/Application Support/Veertu/Anka/addons/copypaste
+           Generation: 0
+    Parent Identifier: Veertu Inc
+
+
+
