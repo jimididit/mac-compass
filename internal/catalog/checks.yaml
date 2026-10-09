@@ -299,6 +299,13 @@ checks:
     sudo: true
     macos_min: 13
     attack: [T1547.015, T1543.001, T1543.004]
+  - id: persistence.launchd-targets
+    section: persistence
+    name: Launch item programs and signatures
+    description: Program each launch item runs, with its code-signing and notarization state
+    builtin: launchd-targets
+    sudo: false
+    attack: [T1543.001, T1543.004]
   - id: persistence.shell-rc
     section: persistence
     name: Shell startup files

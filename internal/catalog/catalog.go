@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -17,6 +18,9 @@ var catalogFS embed.FS
 var idRe = regexp.MustCompile(`^[a-z0-9-]+\.[a-z0-9-]+$`)
 
 var attackRe = regexp.MustCompile(`^T\d{4}(\.\d{3})?$`)
+
+// KnownBuiltins lists the in-process collectors a check may name. The runner must implement each.
+var KnownBuiltins = []string{"launchd-targets"}
 
 // KnownSections lists the section ids a check may use.
 var KnownSections = []string{
@@ -33,6 +37,7 @@ type Check struct {
 	Command          string   `yaml:"command"`
 	Args             []string `yaml:"args"`
 	Script           string   `yaml:"script"` // If set, run with sh -c (for pipes etc.)
+	Builtin          string   `yaml:"builtin"` // If set, run this in-process collector instead (see KnownBuiltins)
 	Sudo             bool     `yaml:"sudo"`
 	RequiresHardware bool     `yaml:"requires_hardware"` // T2/Secure Enclave etc.
 	// Arch limits the check to one CPU architecture: "x86_64" or "arm64". Empty means any.
@@ -119,8 +124,17 @@ func (c *Catalog) Validate() error {
 		case !known[ch.Section]:
 			errs = append(errs, fmt.Errorf("%s: unknown section %q", where, ch.Section))
 		}
-		if (ch.Command == "") == (ch.Script == "") {
-			errs = append(errs, fmt.Errorf("%s: exactly one of command or script is required", where))
+		n := 0
+		for _, set := range []bool{ch.Command != "", ch.Script != "", ch.Builtin != ""} {
+			if set {
+				n++
+			}
+		}
+		if n != 1 {
+			errs = append(errs, fmt.Errorf("%s: exactly one of command, script or builtin is required", where))
+		}
+		if ch.Builtin != "" && !slices.Contains(KnownBuiltins, ch.Builtin) {
+			errs = append(errs, fmt.Errorf("%s: unknown builtin %q", where, ch.Builtin))
 		}
 		if ch.Arch != "" && ch.Arch != "x86_64" && ch.Arch != "arm64" {
 			errs = append(errs, fmt.Errorf("%s: arch must be x86_64 or arm64, got %q", where, ch.Arch))
