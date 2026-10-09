@@ -75,7 +75,7 @@ func Run(ctx context.Context, ch catalog.Check, opts Options, out, errw io.Write
 	if !ch.AppliesTo(opts.MacOSMajor) {
 		return Result{Skipped: true, SkipReason: fmt.Sprintf("not applicable to macOS %d", opts.MacOSMajor)}
 	}
-	if ch.Arch != "" && ch.Arch != hostArch() {
+	if ch.Arch != "" && ch.Arch != HostArch() {
 		return Result{Skipped: true, SkipReason: "only on " + ch.Arch}
 	}
 	if ch.Optional && ch.Command != "" {
@@ -173,8 +173,8 @@ func ParseMajor(v string) int {
 	return n
 }
 
-// hostArch returns the running CPU architecture in uname -m terms.
-func hostArch() string {
+// HostArch returns the running CPU architecture in uname -m terms (x86_64, arm64).
+func HostArch() string {
 	if runtime.GOARCH == "amd64" {
 		return "x86_64"
 	}

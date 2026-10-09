@@ -157,7 +157,7 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 	rep := output.Report{
 		SchemaVersion: output.SchemaVersion,
 		Tool:          output.ToolInfo{Name: "mac-compass", Version: version},
-		Host:          output.HostInfo{Hostname: host, OS: runtime.GOOS, MacOSVersion: sys.Version, MacOSBuild: sys.Build, Arch: runtime.GOARCH},
+		Host:          output.HostInfo{Hostname: host, OS: runtime.GOOS, MacOSVersion: sys.Version, MacOSBuild: sys.Build, Arch: runner.HostArch()},
 		StartedAt:     started.UTC(),
 		DurationMS:    time.Since(started).Milliseconds(),
 		SudoEnabled:   !noSudo,

@@ -99,6 +99,20 @@ After the checks run, mac-compass interprets the output and lists findings, most
 
 `--json` emits one report object (`schema_version` 1): tool and host metadata (macOS version/build, arch), `sections` with every check's raw result, `findings`, and a `summary`. Every check has a stable `id` such as `triage.sip`.
 
+### Baseline and compare
+
+```bash
+# On a known-good Mac (use the same sudo setting both times):
+sudo mac-compass snapshot -o baseline.json
+
+# Later: what changed?
+sudo mac-compass compare baseline.json            # snapshot now, then diff
+mac-compass compare baseline.json today.json      # or diff two snapshots
+sudo mac-compass compare baseline.json --fail-on medium
+```
+
+A snapshot is a normalized inventory: LaunchDaemons/Agents, login items, crontab, kernel and system extensions, TCP/UDP listeners, DNS servers, and security settings (SIP, Gatekeeper, firewall, FileVault, boot-args, update switches). Volatile details (pids, timestamps, sizes) are stripped. Additions are findings, removals are informational, and a changed setting is a finding. A different macOS version, host name or sudo setting between snapshots is reported so Apple's own post-update changes are not mistaken for tampering. Snapshot files are written with mode `0600`.
+
 ### Exit status and safety
 
 - Exit `0`: every check ran (skipped checks do not count as failures) and no `--fail-on` threshold was met. Exit `1`: at least one check failed or timed out. Exit `2`: a finding met `--fail-on`.
