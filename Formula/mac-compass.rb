@@ -2,6 +2,7 @@
 # is needed and macOS does not show a first-run prompt (Homebrew downloads are not quarantined).
 #
 #   brew tap jimididit/mac-compass https://github.com/jimididit/mac-compass
+#   brew trust --formula jimididit/mac-compass/mac-compass   # Homebrew 6 requires trusting third-party taps
 #   brew install mac-compass
 #
 # For each release, point url at the new archive and set sha256 from the release's checksums.txt.

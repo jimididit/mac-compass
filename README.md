@@ -40,7 +40,16 @@ curl -fsSL https://github.com/jimididit/mac-compass/releases/latest/download/mac
 sudo ./mac-compass run-all -y           # the full check
 ```
 
-Or build it yourself (Go 1.24+), which also avoids the prompt: `go install github.com/jimididit/mac-compass@latest`
+Or with Homebrew, which also avoids the prompt. Homebrew 6 asks you to trust a third-party tap before it will load
+its formulae, so trust just this one:
+
+```bash
+brew tap jimididit/mac-compass https://github.com/jimididit/mac-compass
+brew trust --formula jimididit/mac-compass/mac-compass
+brew install mac-compass
+```
+
+Or build it yourself (Go 1.24+), which avoids the prompt too: `go install github.com/jimididit/mac-compass@latest`
 
 **Downloaded with a browser instead?** The binary is signed but not yet notarized by Apple, so macOS shows
 "Apple could not verify..." the first time. Clear it with `xattr -dr com.apple.quarantine .` in the extracted
