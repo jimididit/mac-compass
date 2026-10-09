@@ -1,4 +1,6 @@
-# GoReleaser config: builds macOS binaries from a v* tag.
+# GoReleaser config: builds macOS binaries from a v* tag. It runs on a macOS runner so each binary can be
+# ad-hoc code signed (an unsigned x86_64 binary is killed by macOS when it carries the download quarantine
+# flag). Ad-hoc signing gives no developer identity; Developer ID signing and notarization are separate.
 version: 2
 
 project_name: mac-compass
@@ -19,6 +21,9 @@ builds:
     flags: [-trimpath]
     ldflags:
       - -s -w -X github.com/jimididit/mac-compass/cmd.version={{ .Version }}
+    hooks:
+      post:
+        - cmd: codesign --force --sign - --identifier io.github.jimididit.mac-compass "{{ .Path }}"
 
 # One fat binary that runs natively on Apple Silicon and Intel.
 universal_binaries:
@@ -26,6 +31,9 @@ universal_binaries:
     ids: [mac-compass]
     replace: false
     name_template: mac-compass
+    hooks:
+      post:
+        - cmd: codesign --force --sign - --identifier io.github.jimididit.mac-compass "{{ .Path }}"
 
 archives:
   - id: universal

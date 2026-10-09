@@ -3,6 +3,7 @@ name: release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:   # a dry run: builds and signs a snapshot, publishes nothing
 
 permissions:
   contents: write       # create the (draft) release and upload assets
@@ -11,7 +12,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: macos-26   # codesign is only available on macOS
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
@@ -24,12 +25,12 @@ jobs:
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean ${{ github.event_name == 'workflow_dispatch' && '--snapshot' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: attest build provenance
         # Attestations need a public repo (or GitHub Enterprise Cloud); skip while this repo is private.
-        if: ${{ !github.event.repository.private }}
+        if: ${{ github.event_name == 'push' && !github.event.repository.private }}
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
@@ -63,8 +64,18 @@ jobs:
           mkdir x && tar -xzf mac-compass_*_macos_universal.tar.gz -C x
           cd x
           lipo -archs mac-compass
+          codesign --verify --strict --verbose=2 mac-compass
+          codesign -dv mac-compass 2>&1 | grep -E "Identifier|Signature|flags"
           ./mac-compass version
           ./mac-compass --help >/dev/null
           sudo ./mac-compass run-all -y --vm --json > /tmp/run.json || true
           jq -e '.schema_version == 1 and (.sections | length) > 0' /tmp/run.json
           jq -r '.summary' /tmp/run.json
+      - name: run it as a browser download would leave it (quarantine flag)
+        # Informational: shows what a first-time user sees on this macOS version.
+        continue-on-error: true
+        run: |
+          mkdir q && tar -xzf mac-compass_*_macos_universal.tar.gz -C q
+          xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Safari;$(uuidgen)" q/mac-compass
+          xattr -l q/mac-compass
+          ./q/mac-compass version

@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-09
+
 ### Fixed
 - `compare` against a baseline taken with `--redact` no longer reports every item that mentions the user or host
   as both new and removed: the live snapshot is masked the same way before the comparison.
@@ -13,6 +15,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Findings: hidden folders under a home directory (developer tool caches) are medium instead of high, the monitor's
   own launch item is not flagged, and TCC and timeout errors explain what to do.
 - Monitor status says `alert-active` when findings were already announced instead of repeating `alerted`.
+- Release binaries are now ad-hoc code signed. An unsigned x86_64 binary was killed by macOS (`zsh: killed`) when
+  it carried the quarantine flag of a browser download. The release build runs on macOS to sign them, and the
+  pipeline can be dry-run without publishing.
 
 ### Added
 - `--progress` prints one line per check to stderr, and a check can have its own shorter time limit; login items
