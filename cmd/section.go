@@ -13,6 +13,7 @@ import (
 	"github.com/jimididit/mac-compass/internal/catalog"
 	"github.com/jimididit/mac-compass/internal/findings"
 	"github.com/jimididit/mac-compass/internal/output"
+	"github.com/jimididit/mac-compass/internal/redact"
 	"github.com/jimididit/mac-compass/internal/runner"
 	"github.com/spf13/cobra"
 )
@@ -137,6 +138,14 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 		opts.OutWriter = io.MultiWriter(opts.OutWriter, f)
 		opts.ErrWriter = io.MultiWriter(opts.ErrWriter, f)
 	}
+	var red redact.Redactor
+	if redactOutput {
+		red = redact.ForCurrentUser()
+		outW, errW := red.Writer(opts.OutWriter), red.Writer(opts.ErrWriter)
+		defer outW.Flush()
+		defer errW.Flush()
+		opts.OutWriter, opts.ErrWriter = outW, errW
+	}
 	ctx := cmdContext(cmd)
 	started := time.Now()
 
@@ -166,6 +175,7 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 		Findings:      findings.Evaluate(sections),
 	}
 	rep.Summarize()
+	red.Report(&rep)
 
 	if jsonOutput {
 		if err := output.WriteJSON(cmd.OutOrStdout(), rep); err != nil {

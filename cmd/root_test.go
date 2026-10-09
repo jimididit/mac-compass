@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"runtime"
 	"strings"
 	"testing"
@@ -58,4 +59,31 @@ func TestRequireDarwin(t *testing.T) {
 	if err := requireDarwin(); err != nil {
 		t.Fatalf("override ignored: %v", err)
 	}
+}
+
+// The menu loops until quit, survives a failing section, and rejects unknown input.
+func TestInteractiveMenu_Loops(t *testing.T) {
+	t.Setenv("MAC_COMPASS_ALLOW_NON_DARWIN", "")
+	out, errOut := bytes.NewBuffer(nil), bytes.NewBuffer(nil)
+	rootCmd.SetOut(out)
+	rootCmd.SetErr(errOut)
+	rootCmd.SetIn(strings.NewReader("checklist\nbogus\n12\nq\n"))
+	_ = rootCmd.Flags().Set("help", "false") // earlier tests leave --help set on the shared command
+	rootCmd.SetArgs([]string{})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("menu: %v", err)
+	}
+	if strings.Count(out.String(), "Enter number or name") != 4 {
+		t.Errorf("menu should prompt once per input line:\n%s", out.String())
+	}
+	if !strings.Contains(out.String(), "When you suspect a compromise") {
+		t.Error("checklist did not run")
+	}
+	if !strings.Contains(errOut.String(), `Unknown choice: "bogus"`) {
+		t.Errorf("unknown choice not reported: %q", errOut.String())
+	}
+	if runtime.GOOS != "darwin" && !strings.Contains(errOut.String(), "only run on macOS") {
+		t.Errorf("failing section should be reported, not fatal: %q", errOut.String())
+	}
+	rootCmd.SetIn(nil)
 }

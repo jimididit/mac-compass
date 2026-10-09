@@ -110,6 +110,13 @@ func diffState(id string, m meta, o, c Entry) []output.Finding {
 	if ov == cv {
 		return nil
 	}
+	if good, ok := goodState[id]; ok && good(cv) && !good(ov) {
+		return []output.Finding{{
+			ID: id, CheckID: id, Status: output.StatusInfo,
+			Title:  m.label + " improved since baseline",
+			Detail: fmt.Sprintf("was: %s\nnow: %s", ov, cv),
+		}}
+	}
 	return []output.Finding{{
 		ID: id, CheckID: id, Status: output.StatusFail, Severity: m.addedSev,
 		Title:       m.label + " changed since baseline",

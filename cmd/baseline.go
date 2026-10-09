@@ -9,6 +9,7 @@ import (
 	"github.com/jimididit/mac-compass/internal/baseline"
 	"github.com/jimididit/mac-compass/internal/catalog"
 	"github.com/jimididit/mac-compass/internal/output"
+	"github.com/jimididit/mac-compass/internal/redact"
 	"github.com/jimididit/mac-compass/internal/runner"
 	"github.com/spf13/cobra"
 )
@@ -31,6 +32,9 @@ var snapshotCmd = &cobra.Command{
 		snap, err := takeSnapshot(cmd)
 		if err != nil {
 			return err
+		}
+		if redactOutput {
+			redact.ForCurrentUser().Snapshot(&snap)
 		}
 		w := cmd.OutOrStdout()
 		if snapshotOut != "" {
@@ -80,6 +84,10 @@ var compareCmd = &cobra.Command{
 			return err
 		}
 		res := baseline.Compare(old, cur)
+		var red redact.Redactor
+		if redactOutput {
+			red = redact.ForCurrentUser()
+		}
 		rep := output.Report{
 			SchemaVersion: output.SchemaVersion,
 			Tool:          output.ToolInfo{Name: "mac-compass", Version: version},
@@ -89,6 +97,7 @@ var compareCmd = &cobra.Command{
 			Findings:      res.Findings,
 		}
 		rep.Summarize()
+		red.Report(&rep)
 		if jsonOutput {
 			if err := output.WriteJSON(cmd.OutOrStdout(), rep); err != nil {
 				return err
