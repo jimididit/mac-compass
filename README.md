@@ -10,7 +10,7 @@
 
 ## Install
 
-### From source (Go 1.21+)
+### From source (Go 1.24+)
 
 ```bash
 git clone https://github.com/jimididit/mac-compass.git
@@ -78,6 +78,14 @@ These work on the root command and on section subcommands:
 | `--timeout <duration>` | Time limit per check (default: 90s). Example: `--timeout 30s` |
 | `--json` | Output results as JSON instead of plain text |
 | `--report <path>` | Append human-readable output to a file (ignored when using `--json`) |
+
+### Exit status and safety
+
+- Exit `0`: every check ran (skipped checks do not count as failures). Exit `1`: at least one check failed or timed out.
+- Checks are read-only. Each runs by absolute path with a fixed `PATH` and no `DYLD_*`/`LD_*` variables, so a poisoned environment cannot shadow system tools.
+- Some commands treat a non-zero exit as normal (for example `grep` with no match); the catalog marks these with `ok_exit`.
+- `--report` files are created with mode `0600`.
+- Checks refuse to run off macOS. Set `MAC_COMPASS_ALLOW_NON_DARWIN=1` only for development.
 
 ### Examples
 

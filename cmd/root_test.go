@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -35,5 +37,23 @@ func TestChoiceToSubcommand(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("choiceToSubcommand(%q) = %q; want %q", tt.choice, got, tt.want)
 		}
+	}
+}
+
+func TestRequireDarwin(t *testing.T) {
+	t.Setenv("MAC_COMPASS_ALLOW_NON_DARWIN", "")
+	err := requireDarwin()
+	if runtime.GOOS == "darwin" {
+		if err != nil {
+			t.Fatalf("on darwin: %v", err)
+		}
+		return
+	}
+	if err == nil || !strings.Contains(err.Error(), "macOS") {
+		t.Fatalf("want macOS-only error; got %v", err)
+	}
+	t.Setenv("MAC_COMPASS_ALLOW_NON_DARWIN", "1")
+	if err := requireDarwin(); err != nil {
+		t.Fatalf("override ignored: %v", err)
 	}
 }

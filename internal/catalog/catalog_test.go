@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -75,5 +76,50 @@ func TestSections(t *testing.T) {
 		if !wantSections[s] {
 			t.Logf("Sections() includes %q (may be valid)", s)
 		}
+	}
+}
+
+func TestParse_RejectsUnknownKeys(t *testing.T) {
+	_, err := Parse([]byte("checks:\n  - section: triage\n    name: x\n    command: /bin/true\n    sudoo: true\n"))
+	if err == nil {
+		t.Fatal("typo'd key should be rejected")
+	}
+}
+
+func TestValidate_Problems(t *testing.T) {
+	cases := map[string]string{
+		"no command":     "checks:\n  - {section: triage, name: a}\n",
+		"both":           "checks:\n  - {section: triage, name: a, command: /bin/true, script: 'true'}\n",
+		"bad section":    "checks:\n  - {section: nope, name: a, command: /bin/true}\n",
+		"empty name":     "checks:\n  - {section: triage, command: /bin/true}\n",
+		"duplicate":      "checks:\n  - {section: triage, name: a, command: /bin/true}\n  - {section: triage, name: a, command: /bin/true}\n",
+		"args on script": "checks:\n  - {section: triage, name: a, script: 'true', args: [x]}\n",
+	}
+	for name, y := range cases {
+		if _, err := Parse([]byte(y)); err == nil {
+			t.Errorf("%s: expected validation error", name)
+		}
+	}
+}
+
+func TestEmbeddedCatalog_ReadOnlyAndAbsolute(t *testing.T) {
+	cat, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ch := range cat.Checks {
+		if ch.Command != "" && !strings.HasPrefix(ch.Command, "/") {
+			t.Errorf("%s/%s: command %q must be an absolute path", ch.Section, ch.Name, ch.Command)
+		}
+		if ch.Command == "/usr/sbin/kextcache" || ch.Command == "kextcache" {
+			t.Errorf("%s/%s: kextcache rewrites caches; not a read-only check", ch.Section, ch.Name)
+		}
+	}
+}
+
+func TestExitOK(t *testing.T) {
+	ch := Check{OKExit: []int{1}}
+	if !ch.ExitOK(0) || !ch.ExitOK(1) || ch.ExitOK(2) {
+		t.Error("ExitOK mismatch")
 	}
 }

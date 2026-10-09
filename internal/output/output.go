@@ -7,12 +7,16 @@ import (
 
 // CheckResult is the result of running a single check.
 type CheckResult struct {
-	Section string `json:"section"`
-	Name    string `json:"name"`
-	Ok      bool   `json:"ok"`
-	Stdout  string `json:"stdout,omitempty"`
-	Stderr  string `json:"stderr,omitempty"`
-	Error   string `json:"error,omitempty"`
+	Section    string `json:"section"`
+	Name       string `json:"name"`
+	Ok         bool   `json:"ok"`
+	Skipped    bool   `json:"skipped,omitempty"`
+	SkipReason string `json:"skip_reason,omitempty"`
+	ExitCode   int    `json:"exit_code"`
+	DurationMS int64  `json:"duration_ms"`
+	Stdout     string `json:"stdout,omitempty"`
+	Stderr     string `json:"stderr,omitempty"`
+	Error      string `json:"error,omitempty"`
 }
 
 // SectionResult holds all check results for a section.

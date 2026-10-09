@@ -2,14 +2,12 @@ package cmd
 
 import (
 	"bufio"
-	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/jimididit/mac-compass/internal/catalog"
 	"github.com/jimididit/mac-compass/internal/output"
-	"github.com/jimididit/mac-compass/internal/runner"
 	"github.com/spf13/cobra"
 )
 
@@ -23,12 +21,15 @@ func init() {
 
 var runAllCmd = &cobra.Command{
 	Use:   "run-all",
-	Short: "Run all safe checks",
-	Long:  "Run checks from all sections (triage, processes, kernel, persistence, network, security-tools, advanced, harden). Prompts for confirmation unless -y.",
+	Short: "Run all read-only checks",
+	Long:  "Run checks from all sections (triage, processes, kernel, persistence, network, security-tools, advanced, harden). Prompts for confirmation unless -y. Exits 1 if any check fails.",
 	RunE:  runRunAll,
 }
 
 func runRunAll(cmd *cobra.Command, args []string) error {
+	if err := requireDarwin(); err != nil {
+		return err
+	}
 	cat, err := catalog.Load()
 	if err != nil {
 		return err
@@ -50,48 +51,32 @@ func runRunAll(cmd *cobra.Command, args []string) error {
 			return nil
 		}
 	}
-	opts := runner.Options{
-		Timeout:         timeout,
-		UseSudo:         !noSudo,
-		SkipSudo:        noSudo,
-		VMMode:          vmMode,
-		SudoAllowPrompt: hasTTY(),
-		OutWriter:       cmd.OutOrStdout(),
-		ErrWriter:       cmd.ErrOrStderr(),
-	}
-	ctx := cmd.Context()
-	if ctx == nil {
-		ctx = context.Background()
-	}
 
 	if jsonOutput {
+		opts := runnerOptions(cmd)
+		ctx := cmdContext(cmd)
 		var allResults []output.SectionResult
+		failed := 0
 		for _, sectionID := range sections {
-			checks := cat.BySection(sectionID)
-			var sectionChecks []output.CheckResult
-			for _, ch := range checks {
-				stdout, stderr, runErr := runner.RunCheckCapture(ctx, ch, opts)
-				cr := output.CheckResult{Section: sectionID, Name: ch.Name, Stdout: stdout, Stderr: stderr}
-				if runErr != nil {
-					cr.Ok = false
-					cr.Error = runErr.Error()
-				} else {
-					cr.Ok = true
-				}
-				sectionChecks = append(sectionChecks, cr)
-			}
-			allResults = append(allResults, output.SectionResult{Section: sectionID, Checks: sectionChecks})
+			results := collectSection(ctx, sectionID, cat.BySection(sectionID), opts)
+			failed += countFailed(results)
+			allResults = append(allResults, output.SectionResult{Section: sectionID, Checks: results})
 		}
-		enc := json.NewEncoder(cmd.OutOrStdout())
-		enc.SetIndent("", "  ")
-		return enc.Encode(allResults)
+		if err := output.WriteJSON(cmd.OutOrStdout(), allResults); err != nil {
+			return err
+		}
+		return failedErr(cmd, failed)
 	}
 
+	failedSections := 0
 	for _, sectionID := range sections {
 		fmt.Fprintf(cmd.OutOrStdout(), "\n========== %s ==========\n", sectionID)
 		if err := runSection(cmd, sectionID); err != nil {
-			return err
+			if !errors.Is(err, errChecksFailed) {
+				return err
+			}
+			failedSections++
 		}
 	}
-	return nil
+	return failedErr(cmd, failedSections)
 }
