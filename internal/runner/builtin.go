@@ -41,7 +41,8 @@ func runBuiltin(ctx context.Context, ch catalog.Check, opts Options, out io.Writ
 	if !ok {
 		return Result{Err: fmt.Errorf("unknown builtin %q", ch.Builtin)}
 	}
-	runCtx, cancel := context.WithTimeout(ctx, opts.Timeout)
+	timeout := effectiveTimeout(ch, opts)
+	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	home, _ := InvokingUserHome()
 	start := time.Now()
@@ -52,7 +53,7 @@ func runBuiltin(ctx context.Context, ch catalog.Check, opts Options, out io.Writ
 	}
 	switch {
 	case runCtx.Err() == context.DeadlineExceeded:
-		res.ExitCode, res.Err = -1, fmt.Errorf("timeout after %v", opts.Timeout)
+		res.ExitCode, res.Err = -1, fmt.Errorf("timeout after %v", timeout)
 	case err != nil:
 		res.Err = err
 	}

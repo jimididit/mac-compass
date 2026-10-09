@@ -51,10 +51,13 @@ func evalProcessSignatures(r output.CheckResult) []output.Finding {
 	if len(progs) == 0 {
 		return []output.Finding{info("processes.signatures", "No running programs were listed", firstLine(r.Stderr))}
 	}
-	var risky, rootUser, gone, unsigned []string
+	var risky, hiddenHome, rootUser, gone, unsigned []string
 	counts := map[string]int{}
 	for _, p := range progs {
 		switch {
+		case p.Flags["hidden-location"] && !p.Flags["temp-location"] && strings.HasPrefix(p.Path, "/Users/"):
+			// Developer tools keep helpers in hidden folders under the home directory (~/.cache, ~/.cursor).
+			hiddenHome = append(hiddenHome, p.String()+" ["+p.State+"]")
 		case p.Flags["temp-location"] || p.Flags["hidden-location"]:
 			risky = append(risky, p.String()+" ["+processLocation(p)+", "+p.State+"]")
 		case p.Flags["root-from-user-dir"]:
@@ -74,6 +77,8 @@ func evalProcessSignatures(r output.CheckResult) []output.Finding {
 	}
 	add(output.SeverityHigh, "%d running program(s) started from a temporary or hidden location", risky,
 		"Legitimate software runs from /Applications, /Library, /usr or a user's own tools folder. Identify the process (ps, lsof -p) and stop it if unknown.")
+	add(output.SeverityMedium, "%d running program(s) started from a hidden folder in a home directory", hiddenHome,
+		"Common for developer tool caches such as ~/.cache and ~/.cursor, but malware also hides here. Confirm each program is something you installed; accept the ones you have reviewed with --suppress.")
 	add(output.SeverityMedium, "%d program(s) run as root from a user's home folder", rootUser,
 		"Root processes normally come from system locations. Confirm what launched it and why it has root.")
 	add(output.SeverityMedium, "%d running program(s) no longer exist on disk", gone,

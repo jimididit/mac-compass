@@ -162,6 +162,7 @@ checks:
     command: /usr/bin/osascript
     args: [-e, 'tell application "System Events" to get the name of every login item']
     sudo: false
+    timeout: 20s  # System Events can stall for over a minute when no GUI session is available
     attack: [T1547.015]
   - id: persistence.crontab
     section: persistence
@@ -245,6 +246,7 @@ checks:
     command: /usr/sbin/softwareupdate
     args: [-l]
     sudo: false
+    timeout: 60s
   - id: harden.auto-update-settings
     section: harden
     name: Automatic update settings

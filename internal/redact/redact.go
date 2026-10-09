@@ -101,6 +101,7 @@ func (r Redactor) Report(rep *output.Report) {
 
 // Snapshot redacts a snapshot in place. Redact both sides of a comparison or neither.
 func (r Redactor) Snapshot(s *baseline.Snapshot) {
+	s.Redacted = true
 	s.Host.Hostname = r.String(s.Host.Hostname)
 	for id, e := range s.Checks {
 		e.Items = r.strings(e.Items)

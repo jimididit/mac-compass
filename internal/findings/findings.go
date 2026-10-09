@@ -47,8 +47,9 @@ func Evaluate(sections []output.SectionResult) []output.Finding {
 			if !r.Ok {
 				out = append(out, output.Finding{
 					ID: r.ID, CheckID: r.ID, Status: output.StatusError, Attack: r.Attack,
-					Title:  fmt.Sprintf("Check %q could not run", r.Name),
-					Detail: strings.TrimSpace(r.Error + " " + firstLine(r.Stderr)),
+					Title:       fmt.Sprintf("Check %q could not run", r.Name),
+					Detail:      strings.TrimSpace(r.Error + " " + firstLine(r.Stderr)),
+					Remediation: errorHint(r),
 				})
 				continue
 			}
@@ -65,6 +66,20 @@ func Evaluate(sections []output.SectionResult) []output.Finding {
 	}
 	sort.SliceStable(out, func(i, j int) bool { return order(out[i]) > order(out[j]) })
 	return out
+}
+
+// errorHint explains the usual cause of a check failing to run, when we know it.
+func errorHint(r output.CheckResult) string {
+	text := strings.ToLower(r.Error + " " + r.Stderr)
+	switch {
+	case strings.HasPrefix(r.ID, "security-tools.tcc-") && (strings.Contains(text, "authorization denied") || strings.Contains(text, "unable to open database")):
+		return "The privacy database is protected. Give your terminal app Full Disk Access (System Settings > Privacy & Security > Full Disk Access), quit and reopen it, and run again."
+	case strings.Contains(text, "timeout after"):
+		return "The check took too long and was stopped. Run again; if it keeps timing out, raise --timeout."
+	case strings.Contains(text, "operation not permitted"):
+		return "macOS blocked access. Grant your terminal app Full Disk Access in System Settings > Privacy & Security."
+	}
+	return ""
 }
 
 // order ranks findings: fails by severity, then errors, then info, then pass.

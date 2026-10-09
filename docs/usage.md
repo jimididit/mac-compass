@@ -33,6 +33,7 @@ These work on every command that runs checks.
 | `--suppress <file>` | Accept reviewed findings ([details](baseline.md#accepting-reviewed-findings)) |
 | `--html <file>` | Also write a self-contained HTML report ([details](#report-formats)) |
 | `--sarif <file>` | Also write a SARIF 2.1.0 report ([details](#report-formats)) |
+| `--progress` | Print one line per check to stderr as it finishes (slow machines, CI logs) |
 | `--redact` | Mask the host name and your user name in output, reports and snapshots |
 
 ## Reading the results
@@ -111,6 +112,11 @@ in the state folder with the baseline, `state.json` and `monitor.log` (emptied o
 | Alerts | desktop notifications, plus the log | the log and `state.json` only |
 | State folder | `~/Library/Application Support/mac-compass` | `/Library/Application Support/mac-compass` |
 
+**No banner?** Notifications come from `osascript`, which macOS attributes to Script Editor. If nothing appears,
+allow Script Editor in System Settings > Notifications and check that Focus is off. `monitor status` shows
+the last alert time, and the alert is always in `monitor.log` and `latest.json` whether or not a banner showed.
+A run whose findings were already announced reports `alert-active` instead of alerting again.
+
 Options: `--every 30m` (minimum 5 minutes), `--notify-on high`, `--suppress file.yaml` to accept reviewed
 findings, `--no-load` to write the plist without loading it, and `monitor run --rebaseline` to accept the current
 state as the new baseline after a legitimate change (an update, new software).
@@ -150,6 +156,13 @@ mac-compass verify /Volumes/Evidence/laptop-2026-10-09 --expect <the hash you re
 proves the files match the manifest; someone able to edit a file could also have rewritten the manifest. The
 hash you recorded elsewhere is what closes that gap. Use `--redact` to mask the host and user name inside the
 bundle, and `--suppress` to move reviewed findings out of the active list.
+
+Files written under `sudo` (`--html`, `--sarif`, `--report`, `snapshot -o`, and the whole `collect` folder) are handed
+back to the user who ran `sudo`, so you can open your own reports; they stay private (mode `0600` / `0700`).
+`collect` exits `1` when a check could not run, even though the bundle was written; the bundle is still complete.
+
+A check that can stall has its own shorter limit (for example login items at 20 s), so one slow check cannot
+hold up the whole run. A check that hits its limit is reported as "could not run" with a hint.
 
 ## Exit status
 
