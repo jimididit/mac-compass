@@ -86,6 +86,26 @@ jobs:
           # Put the file back for the artifact.
           sed -i.bak '$ d' out/evidence/findings.txt && rm out/evidence/findings.txt.bak
           ./mac-compass verify out/evidence --expect "$HASH"
+      - name: monitor (baseline, plant a change, alert once, install checks)
+        run: |
+          set -e
+          MON="$RUNNER_TEMP/mon"
+          run() { ./mac-compass monitor run --state-dir "$MON" --no-sudo --vm --no-notify | tee -a out/monitor.txt; }
+          run | grep -q "monitor: baselined"
+          run | grep -q "monitor: clean"
+          mkdir -p "$HOME/Library/LaunchAgents"
+          touch "$HOME/Library/LaunchAgents/com.example.monitor-ci-test.plist"
+          run | grep -q "ALERT"
+          # The same unresolved problem must not alert again.
+          ! run | grep -q "ALERT"
+          rm -f "$HOME/Library/LaunchAgents/com.example.monitor-ci-test.plist"
+          run | grep -q "monitor: clean"
+          ./mac-compass monitor status --state-dir "$MON" --launch-dir "$RUNNER_TEMP/la" | tee out/monitor-status.txt
+          # install writes a valid plist; a root daemon from a user-owned binary is refused.
+          ./mac-compass monitor install --no-load --launch-dir "$RUNNER_TEMP/la" --state-dir "$MON" --every 15m
+          plutil -lint "$RUNNER_TEMP/la/io.github.jimididit.mac-compass.monitor.plist"
+          ! sudo ./mac-compass monitor install --scope system --no-load --launch-dir "$RUNNER_TEMP/ld" --state-dir "$RUNNER_TEMP/sys" 2>out/monitor-system.txt
+          grep -q "refusing to install a root daemon" out/monitor-system.txt
       - name: summary
         if: always()
         run: |

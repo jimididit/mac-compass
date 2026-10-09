@@ -224,3 +224,65 @@ func TestWriteExtraReports(t *testing.T) {
 		t.Errorf("no flags, nothing to do: %v", err)
 	}
 }
+
+func TestMonitorInstallStatusUninstall(t *testing.T) {
+	t.Setenv("MAC_COMPASS_ALLOW_NON_DARWIN", "1")
+	dir := t.TempDir()
+	launch, state := filepath.Join(dir, "launch"), filepath.Join(dir, "state")
+	defer func() { monScope, monLaunchDir, monStateDir, monNoLoad, monPurge = "user", "", "", false, false }()
+
+	out, err := runCmd(t, "monitor", "install", "--no-load", "--launch-dir", launch, "--state-dir", state, "--every", "30m", "--notify-on", "high")
+	if err != nil {
+		t.Fatalf("install: %v\n%s", err, out)
+	}
+	plist, err := os.ReadFile(filepath.Join(launch, "io.github.jimididit.mac-compass.monitor.plist"))
+	if err != nil {
+		t.Fatalf("plist not written: %v", err)
+	}
+	for _, want := range []string{"<integer>1800</integer>", "<string>--notify-on</string>", "<string>high</string>", "<string>--no-sudo</string>", "<string>monitor</string>"} {
+		if !strings.Contains(string(plist), want) {
+			t.Errorf("plist missing %q", want)
+		}
+	}
+	if fi, err := os.Stat(state); err != nil || !fi.IsDir() {
+		t.Errorf("state folder not created: %v", err)
+	}
+
+	out, err = runCmd(t, "monitor", "status", "--launch-dir", launch, "--state-dir", state)
+	if err != nil || !strings.Contains(out, "(present)") || !strings.Contains(out, "last run:   never") {
+		t.Errorf("status: %v\n%s", err, out)
+	}
+
+	out, err = runCmd(t, "monitor", "uninstall", "--launch-dir", launch, "--state-dir", state, "--purge")
+	if err != nil || !strings.Contains(out, "Removed") {
+		t.Fatalf("uninstall: %v\n%s", err, out)
+	}
+	if _, err := os.Stat(filepath.Join(launch, "io.github.jimididit.mac-compass.monitor.plist")); err == nil {
+		t.Error("plist must be removed")
+	}
+	if _, err := os.Stat(state); err == nil {
+		t.Error("--purge must delete the state folder")
+	}
+	out, _ = runCmd(t, "monitor", "uninstall", "--launch-dir", launch, "--state-dir", state)
+	if !strings.Contains(out, "Not installed") {
+		t.Errorf("uninstalling twice should say so: %s", out)
+	}
+}
+
+func TestMonitorInstallValidation(t *testing.T) {
+	t.Setenv("MAC_COMPASS_ALLOW_NON_DARWIN", "1")
+	dir := t.TempDir()
+	defer func() { monScope, monLaunchDir, monStateDir, monNoLoad = "user", "", "", false }()
+	base := []string{"monitor", "install", "--no-load", "--launch-dir", filepath.Join(dir, "l"), "--state-dir", filepath.Join(dir, "s")}
+	for name, extra := range map[string][]string{
+		"too frequent":   {"--every", "1m"},
+		"bad scope":      {"--scope", "global"},
+		"bad notify-on":  {"--notify-on", "severe"},
+		"system no sudo": {"--scope", "system"},
+	} {
+		if out, err := runCmd(t, append(append([]string{}, base...), extra...)...); err == nil {
+			t.Errorf("%s must be rejected:\n%s", name, out)
+		}
+		monScope, monEvery, monNotifyOn = "user", time.Hour, "medium"
+	}
+}

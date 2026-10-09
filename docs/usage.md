@@ -10,6 +10,7 @@
 | `mac-compass processes` · `kernel` · `persistence` · `network` · `security-tools` · `advanced` · `harden` · `accounts` | One section at a time |
 | `mac-compass snapshot` | Record a baseline ([details](baseline.md)) |
 | `mac-compass compare BASELINE [CURRENT]` | Show what changed since a baseline ([details](baseline.md)) |
+| `mac-compass monitor install` / `status` / `run` / `uninstall` | Watch for changes on a schedule ([details](#monitor-mode)) |
 | `mac-compass collect` | Run everything and save a hashed evidence bundle ([details](#evidence-bundles)) |
 | `mac-compass verify FOLDER` | Check an evidence bundle against its manifest |
 | `mac-compass checklist` | Incident-response checklist (runs nothing) |
@@ -85,6 +86,41 @@ Both files are written with mode `0600`, honour `--redact` and `--suppress`, and
 ```bash
 sudo mac-compass run-all -y --html report.html --sarif report.sarif
 ```
+
+## Monitor mode
+
+`mac-compass monitor` runs the comparison on a schedule through launchd and alerts you when something new and
+serious appears.
+
+```bash
+mac-compass monitor install            # a LaunchAgent for you; runs every hour
+mac-compass monitor status             # installed? loaded? what did it last see?
+mac-compass monitor uninstall [--purge]
+```
+
+The first run records a **baseline** of this Mac. Every later run takes a fresh snapshot, compares it with that
+baseline, and raises an alert only when the set of findings at or above `--notify-on` (default `medium`)
+**changes**. The same unresolved problem is not announced every hour, and a problem that goes away and comes
+back alerts again. Each run's comparison is kept in `history/` (the newest 50) and the latest in `latest.json`,
+in the state folder with the baseline, `state.json` and `monitor.log` (emptied once it passes 1 MB).
+
+| | `--scope user` (default) | `--scope system` (needs `sudo`) |
+|---|---|---|
+| Installs | a LaunchAgent in `~/Library/LaunchAgents` | a root LaunchDaemon in `/Library/LaunchDaemons` |
+| Checks that run | unprivileged ones | all of them, as root |
+| Alerts | desktop notifications, plus the log | the log and `state.json` only |
+| State folder | `~/Library/Application Support/mac-compass` | `/Library/Application Support/mac-compass` |
+
+Options: `--every 30m` (minimum 5 minutes), `--notify-on high`, `--suppress file.yaml` to accept reviewed
+findings, `--no-load` to write the plist without loading it, and `monitor run --rebaseline` to accept the current
+state as the new baseline after a legitimate change (an update, new software).
+
+**Security notes.** A root daemon runs the mac-compass binary as root on a schedule, so `install --scope system`
+refuses unless the binary and every folder above it are owned by root and not writable by anyone else (for
+example `sudo cp mac-compass /usr/local/bin/`); otherwise whoever can replace the file could get root. The
+monitor does not repair a damaged baseline silently, because that would hide changes: it reports the error and
+asks for `--rebaseline`. The job's own plist appears as a launch item on the next comparison, so install it
+before you take the baseline you care about.
 
 ## Evidence bundles
 

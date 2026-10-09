@@ -24,6 +24,7 @@ later.
 - **Access** – local accounts and admins, SSH keys, guest and auto login, privacy (TCC) grants, profiles and MDM.
 - **Network** – listeners, connections, firewall, DNS and proxies.
 - **Reports** – terminal, JSON, a self-contained HTML page, SARIF, and hashed evidence bundles.
+- **Monitor mode** – a scheduled comparison that alerts you when something new and serious appears, once.
 - **Baseline and compare** – a normalized inventory you can diff, with `--fail-on` for scripts and CI.
 - **Safe by design** – checks only *read*; absolute paths and a scrubbed environment; reports are `0600`; `--redact` before sharing.
 

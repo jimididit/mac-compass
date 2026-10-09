@@ -43,7 +43,7 @@ func runBuiltin(ctx context.Context, ch catalog.Check, opts Options, out io.Writ
 	}
 	runCtx, cancel := context.WithTimeout(ctx, opts.Timeout)
 	defer cancel()
-	home, _ := invokingUserHome()
+	home, _ := InvokingUserHome()
 	start := time.Now()
 	stdout, err := fn(runCtx, deps{exec: realExec, listDir: listDir, exists: pathExists, readHead: readHead, home: home})
 	res := Result{Stdout: stdout, Duration: time.Since(start)}
