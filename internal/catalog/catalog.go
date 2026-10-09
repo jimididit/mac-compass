@@ -32,12 +32,25 @@ type Check struct {
 	RequiresHardware bool     `yaml:"requires_hardware"` // T2/Secure Enclave etc.
 	// Arch limits the check to one CPU architecture: "x86_64" or "arm64". Empty means any.
 	Arch string `yaml:"arch"`
+	// MacOSMin/MacOSMax bound the macOS major version (11, 12, ... 26, 27) the check
+	// applies to; 0 means unbounded. Outside the range the check is skipped.
+	MacOSMin int `yaml:"macos_min"`
+	MacOSMax int `yaml:"macos_max"`
 	// Optional marks a check whose binary may be absent on some macOS versions;
 	// a missing binary is reported as skipped, not failed.
 	Optional bool `yaml:"optional"`
 	// OKExit lists exit codes (besides 0) that mean the check ran fine, e.g. 1 for
 	// "grep found nothing" or "crontab: no crontab for user".
 	OKExit []int `yaml:"ok_exit"`
+}
+
+// AppliesTo reports whether the check applies to macOS major version v.
+// An unknown version (0) applies to everything, so detection failure never hides checks.
+func (c Check) AppliesTo(v int) bool {
+	if v == 0 {
+		return true
+	}
+	return v >= c.MacOSMin && (c.MacOSMax == 0 || v <= c.MacOSMax)
 }
 
 // ExitOK reports whether code is an acceptable exit status for the check.
@@ -103,6 +116,9 @@ func (c *Catalog) Validate() error {
 		}
 		if ch.Arch != "" && ch.Arch != "x86_64" && ch.Arch != "arm64" {
 			errs = append(errs, fmt.Errorf("%s: arch must be x86_64 or arm64, got %q", where, ch.Arch))
+		}
+		if ch.MacOSMin < 0 || ch.MacOSMax < 0 || (ch.MacOSMax != 0 && ch.MacOSMin > ch.MacOSMax) {
+			errs = append(errs, fmt.Errorf("%s: invalid macos_min/macos_max (%d, %d)", where, ch.MacOSMin, ch.MacOSMax))
 		}
 		if ch.Script != "" && len(ch.Args) > 0 {
 			errs = append(errs, fmt.Errorf("%s: args set together with script", where))

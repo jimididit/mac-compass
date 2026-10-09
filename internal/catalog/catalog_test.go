@@ -159,3 +159,21 @@ func TestParse_BadArch(t *testing.T) {
 		t.Fatal("bad arch should be rejected")
 	}
 }
+
+func TestAppliesTo(t *testing.T) {
+	ch := Check{MacOSMin: 12, MacOSMax: 26}
+	for v, want := range map[int]bool{0: true, 11: false, 12: true, 26: true, 27: false} {
+		if got := ch.AppliesTo(v); got != want {
+			t.Errorf("AppliesTo(%d) = %v; want %v", v, got, want)
+		}
+	}
+	if !(Check{}).AppliesTo(27) {
+		t.Error("unbounded check must apply to every version")
+	}
+}
+
+func TestParse_BadMacOSRange(t *testing.T) {
+	if _, err := Parse([]byte("checks:\n  - {section: triage, name: a, command: /bin/true, macos_min: 15, macos_max: 12}\n")); err == nil {
+		t.Fatal("min > max should be rejected")
+	}
+}

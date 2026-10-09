@@ -11,6 +11,7 @@ import (
 	"os/user"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,6 +33,7 @@ type Options struct {
 	Timeout         time.Duration
 	SkipSudo        bool // If true, skip checks that require sudo
 	VMMode          bool // If true, skip checks that require hardware (e.g. T2)
+	MacOSMajor      int  // Detected macOS major version; 0 = unknown (no version gating)
 	SudoAllowPrompt bool // If true and running in a TTY, sudo will prompt for password when needed
 	OutWriter       io.Writer
 	ErrWriter       io.Writer
@@ -70,6 +72,9 @@ func Run(ctx context.Context, ch catalog.Check, opts Options, out, errw io.Write
 		return Result{Skipped: true, SkipReason: "requires hardware (VM mode)"}
 	}
 
+	if !ch.AppliesTo(opts.MacOSMajor) {
+		return Result{Skipped: true, SkipReason: fmt.Sprintf("not applicable to macOS %d", opts.MacOSMajor)}
+	}
 	if ch.Arch != "" && ch.Arch != hostArch() {
 		return Result{Skipped: true, SkipReason: "only on " + ch.Arch}
 	}
@@ -131,6 +136,30 @@ func Run(ctx context.Context, ch catalog.Check, opts Options, out, errw io.Write
 	}
 	res.Err = runErr
 	return res
+}
+
+// DetectMacOSMajor returns the macOS major version (e.g. 15, 26), or 0 if it cannot be
+// determined (non-macOS host, sw_vers missing, unexpected output).
+func DetectMacOSMajor() int {
+	if runtime.GOOS != "darwin" {
+		return 0
+	}
+	out, err := exec.Command("/usr/bin/sw_vers", "-productVersion").Output()
+	if err != nil {
+		return 0
+	}
+	return ParseMajor(string(out))
+}
+
+// ParseMajor extracts the major version from "26.6.2", "15.7", "10.15.7" style strings.
+func ParseMajor(v string) int {
+	v = strings.TrimSpace(v)
+	major, _, _ := strings.Cut(v, ".")
+	n, err := strconv.Atoi(major)
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
 }
 
 // hostArch returns the running CPU architecture in uname -m terms.

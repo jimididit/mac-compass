@@ -4,7 +4,7 @@
 # Rules: every check is read-only; commands use absolute paths; each check appears once
 # across the whole catalog (run-all runs everything). ok_exit lists non-zero exit codes
 # that mean "ran fine" (e.g. grep found nothing). arch/optional gate checks that only
-# exist on some Macs.
+# exist on some Macs; macos_min/macos_max bound the macOS major version (11..27).
 
 checks:
   # --- 1. Quick Triage ---
@@ -22,6 +22,7 @@ checks:
     args: [authenticated-root, status]
     sudo: false
     vm_safe: true
+    macos_min: 11
     optional: true
   - section: triage
     name: Gatekeeper status
@@ -36,6 +37,7 @@ checks:
     script: /usr/bin/kmutil showloaded | grep -v com.apple
     sudo: false
     vm_safe: true
+    macos_min: 11
     ok_exit: [1]
   - section: triage
     name: LaunchDaemons
@@ -88,6 +90,7 @@ checks:
     args: [showloaded]
     sudo: false
     vm_safe: true
+    macos_min: 11
   - section: kernel
     name: System extensions
     description: Modern system extensions (replacement for KEXTs)
