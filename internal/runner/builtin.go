@@ -31,7 +31,8 @@ type builtinFn func(ctx context.Context, d deps) (string, error)
 
 // builtins implements every name in catalog.KnownBuiltins.
 var builtins = map[string]builtinFn{
-	"launchd-targets": launchdTargets,
+	"launchd-targets":    launchdTargets,
+	"process-signatures": processSignatures,
 }
 
 // runBuiltin runs an in-process collector with the same timeout and result shape as a command.

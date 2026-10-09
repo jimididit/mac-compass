@@ -28,6 +28,7 @@ What is running and what could be injecting into it.
 
 | Check id | What it looks at | sudo | Judged | Baseline | ATT&CK |
 |---|---|:-:|:-:|:-:|---|
+| `processes.signatures` | Each distinct program currently running, with its code-signing and notarization state |  | ✓ |  | [T1036](https://attack.mitre.org/techniques/T1036/) |
 | `processes.ps-all` | List all running processes with full details |  |  |  |  |
 | `processes.high-cpu` | Processes using >50% CPU |  |  |  |  |
 | `processes.high-memory` | Processes using >50% memory |  |  |  |  |

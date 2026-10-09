@@ -60,6 +60,13 @@ checks:
     attack: [T1543.001]
 
   # --- 2. Process & Memory ---
+  - id: processes.signatures
+    section: processes
+    name: Running program signatures
+    description: Each distinct program currently running, with its code-signing and notarization state
+    builtin: process-signatures
+    sudo: false
+    attack: [T1036]
   - id: processes.ps-all
     section: processes
     name: All processes (full)

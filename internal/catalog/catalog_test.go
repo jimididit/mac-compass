@@ -131,7 +131,7 @@ func TestEmbeddedCatalog_NoDuplicateCommands(t *testing.T) {
 	}
 	seen := map[string]string{}
 	for _, ch := range cat.Checks {
-		sig := ch.Command + " " + strings.Join(ch.Args, " ") + "|" + ch.Script
+		sig := ch.Command + " " + strings.Join(ch.Args, " ") + "|" + ch.Script + "|" + ch.Builtin
 		if prev, dup := seen[sig]; dup {
 			t.Errorf("%s/%s duplicates %s", ch.Section, ch.Name, prev)
 		}
