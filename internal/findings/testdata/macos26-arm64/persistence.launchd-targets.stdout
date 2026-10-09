@@ -1,0 +1,14 @@
+kind	label	plist	target	state	team	signer	notarization	flags
+daemon	session-manager-plugin	/Library/LaunchDaemons/SessionManagerPlugin.plist	-	no-program	-	-	-	-
+daemon	change-hostname	/Library/LaunchDaemons/change_hostname.plist	/usr/local/bin/change_hostname.sh	script	-	-	-	runatload,shebang
+daemon	com.veertu.anka.addons.ankaupd	/Library/LaunchDaemons/com.veertu.anka.addons.ankaupd.plist	/Library/Application Support/Veertu/Anka/addons/ankaupd.sh	script	-	-	-	runatload,shebang
+daemon	com.veertu.anka.addons	/Library/LaunchDaemons/com.veertu.anka.addons.plist	/Library/Application Support/Veertu/Anka/addons/addonsd	developer-id	TT9FAWP6V4	Developer ID Application: Veertu Inc (TT9FAWP6V4)	notarized	runatload,keepalive
+daemon	com.veertu.anka.addons.proxy	/Library/LaunchDaemons/com.veertu.anka.addons.proxy.plist	/Library/Application Support/Veertu/Anka/addons/proxyd	developer-id	TT9FAWP6V4	Developer ID Application: Veertu Inc (TT9FAWP6V4)	notarized	runatload,keepalive
+daemon	com.veertu.anka.addons.ssh	/Library/LaunchDaemons/com.veertu.anka.addons.ssh.plist	/bin/launchctl	apple	-	macOS Software Signing	apple	runatload
+daemon	com.veertu.anka.addons.systemsetup	/Library/LaunchDaemons/com.veertu.anka.addons.systemsetup.plist	/usr/sbin/systemsetup	apple	-	macOS Software Signing	apple	runatload
+agent	com.veertu.anka.addons.ankacp	/Library/LaunchAgents/com.veertu.anka.addons.ankacp.plist	/Library/Application Support/Veertu/Anka/addons/ankacpd	developer-id	TT9FAWP6V4	Developer ID Application: Veertu Inc (TT9FAWP6V4)	notarized	runatload,keepalive
+agent	com.veertu.anka.addons.ankarun	/Library/LaunchAgents/com.veertu.anka.addons.ankarun.plist	/Library/Application Support/Veertu/Anka/addons/ankarund	developer-id	TT9FAWP6V4	Developer ID Application: Veertu Inc (TT9FAWP6V4)	notarized	runatload,keepalive
+agent	com.veertu.anka.addons.copypaste	/Library/LaunchAgents/com.veertu.anka.addons.copypaste.plist	/Library/Application Support/Veertu/Anka/addons/copypaste	developer-id	TT9FAWP6V4	Developer ID Application: Veertu Inc (TT9FAWP6V4)	notarized	runatload,keepalive
+agent	com.veertu.anka.addons.locale	/Library/LaunchAgents/com.veertu.anka.addons.locale.plist	/usr/bin/defaults	apple	-	macOS Software Signing	apple	runatload
+agent	com.veertu.anka.addons.screenunsaver	/Library/LaunchAgents/com.veertu.anka.addons.screenunsaver.plist	/usr/bin/defaults	apple	-	macOS Software Signing	apple	runatload
+user-agent	runner-provisioner	/Users/runner/Library/LaunchAgents/hca.plist	/opt/hca/start_hca.sh	script	-	-	-	runatload,shebang

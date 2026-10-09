@@ -75,3 +75,27 @@ func TestLaunchdTargets_EmptyAndMalformed(t *testing.T) {
 		t.Errorf("malformed rows are ignored: %+v", f)
 	}
 }
+
+// Real output from a hosted macOS 26 runner: Apple tools, notarized Developer ID daemons and shell
+// scripts, with nothing unsigned or in a risky location.
+func TestLaunchdTargets_RealRunnerOutput(t *testing.T) {
+	r := fixture(t, "macos26-arm64", "persistence.launchd-targets")
+	fs := eval(t, r)
+	if len(fs) != 2 {
+		t.Fatalf("want a script finding and a summary, got %+v", fs)
+	}
+	if fs[0].Status != output.StatusFail || fs[0].Severity != output.SeverityLow || !strings.Contains(fs[0].Title, "3 launch item(s) run a shell script") {
+		t.Errorf("script finding: %+v", fs[0])
+	}
+	for _, label := range []string{"change-hostname", "ankaupd", "runner-provisioner"} {
+		if !strings.Contains(fs[0].Detail, label) {
+			t.Errorf("script finding should list %s: %s", label, fs[0].Detail)
+		}
+	}
+	sum := fs[1]
+	for _, want := range []string{"4 Apple", "5 Developer ID, notarized", "3 script"} {
+		if !strings.Contains(sum.Detail, want) {
+			t.Errorf("summary lacks %q: %q", want, sum.Detail)
+		}
+	}
+}
