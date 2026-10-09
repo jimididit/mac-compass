@@ -19,7 +19,7 @@ var idRe = regexp.MustCompile(`^[a-z0-9-]+\.[a-z0-9-]+$`)
 // KnownSections lists the section ids a check may use.
 var KnownSections = []string{
 	"triage", "processes", "kernel", "persistence",
-	"network", "security-tools", "advanced", "harden",
+	"network", "security-tools", "advanced", "harden", "accounts",
 }
 
 // Check represents a single runnable check.

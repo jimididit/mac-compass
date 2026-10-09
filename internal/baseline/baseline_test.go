@@ -214,3 +214,48 @@ func TestEveryExtractorHasMetaAndCatalogID(t *testing.T) {
 		}
 	}
 }
+
+func TestAccessExtractors(t *testing.T) {
+	s := snap(output.HostInfo{},
+		res("accounts.local-users", "_spotlight 89\nroot 0\nbackdoor 0\nalice 501\n"),
+		res("accounts.admin-group", "GroupMembership: root alice\n"),
+		res("persistence.shell-rc", "abc123  /Users/me/.zshrc\n"),
+		res("persistence.hosts", "127.0.0.1\tlocalhost\n1.2.3.4   evil.test\n"),
+		res("network.proxy", "<dictionary> {\n  HTTPEnable : 1\n  HTTPProxy : 10.0.0.9\n  ExceptionsList : <array> {\n  }\n}\n"),
+		res("security-tools.mdm-enrollment", "Enrolled via DEP: No\nMDM enrollment: No\n"),
+		res("accounts.guest", ""),
+	)
+	eq := func(id, want string) {
+		t.Helper()
+		if got := strings.Join(s.Checks[id].Items, "|"); got != want {
+			t.Errorf("%s = %q; want %q", id, got, want)
+		}
+	}
+	eq("accounts.local-users", "alice 501|backdoor 0|root 0")
+	eq("accounts.admin-group", "alice|root")
+	eq("persistence.shell-rc", "abc123  /Users/me/.zshrc")
+	eq("persistence.hosts", "1.2.3.4 evil.test|127.0.0.1 localhost")
+	eq("network.proxy", "HTTPEnable : 1|HTTPProxy : 10.0.0.9")
+	eq("security-tools.mdm-enrollment", "Enrolled via DEP: No; MDM enrollment: No")
+	if s.Checks["accounts.guest"].Kind != KindState {
+		t.Error("guest must be a state entry")
+	}
+}
+
+func TestCompare_NewAdminAndModifiedShellRC(t *testing.T) {
+	old := snap(output.HostInfo{},
+		res("accounts.admin-group", "GroupMembership: root alice\n"),
+		res("persistence.shell-rc", "aaa  /Users/me/.zshrc\n"),
+	)
+	cur := snap(output.HostInfo{},
+		res("accounts.admin-group", "GroupMembership: root alice mallory\n"),
+		res("persistence.shell-rc", "bbb  /Users/me/.zshrc\n"),
+	)
+	r := Compare(old, cur)
+	if f := find(t, r, "accounts.admin-group", output.StatusFail); f.Severity != output.SeverityHigh || !strings.Contains(f.Detail, "+ mallory") {
+		t.Errorf("new admin: %+v", f)
+	}
+	if f := find(t, r, "persistence.shell-rc", output.StatusFail); !strings.Contains(f.Detail, "+ bbb  /Users/me/.zshrc") {
+		t.Errorf("modified rc must appear as a new hash line: %+v", f)
+	}
+}

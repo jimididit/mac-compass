@@ -17,6 +17,7 @@ func addStubCommands() {
 		{"security-tools", "Security tools & verification", "Run built-in security tool checks."},
 		{"advanced", "Advanced detection techniques", "Run advanced detection checks."},
 		{"harden", "Preventive / hardening measures", "Run hardening/preventive checks."},
+		{"accounts", "Accounts and access", "Run local account, admin group and remote-access checks."},
 	}
 	for _, s := range sections {
 		sectionID := s.name

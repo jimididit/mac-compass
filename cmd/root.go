@@ -69,7 +69,8 @@ func runInteractive(cmd *cobra.Command, args []string) error {
 	fmt.Fprintln(cmd.OutOrStdout(), "  8. checklist    - Incident response checklist")
 	fmt.Fprintln(cmd.OutOrStdout(), "  9. harden       - Preventive measures")
 	fmt.Fprintln(cmd.OutOrStdout(), " 10. refs         - References & resources")
-	fmt.Fprintln(cmd.OutOrStdout(), " 11. run-all      - Run all safe checks")
+	fmt.Fprintln(cmd.OutOrStdout(), " 11. run-all      - Run all read-only checks")
+	fmt.Fprintln(cmd.OutOrStdout(), " 12. accounts     - Accounts and access")
 	fmt.Fprintln(cmd.OutOrStdout(), "")
 	fmt.Fprint(cmd.OutOrStdout(), "Enter number or subcommand (or press Enter for help): ")
 	scanner := bufio.NewScanner(cmd.InOrStdin())
@@ -123,6 +124,8 @@ func choiceToSubcommand(choice string) string {
 		return "refs"
 	case "11", "run-all":
 		return "run-all"
+	case "12", "accounts":
+		return "accounts"
 	default:
 		return ""
 	}
