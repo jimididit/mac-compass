@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/user"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -69,6 +70,15 @@ func Run(ctx context.Context, ch catalog.Check, opts Options, out, errw io.Write
 		return Result{Skipped: true, SkipReason: "requires hardware (VM mode)"}
 	}
 
+	if ch.Arch != "" && ch.Arch != hostArch() {
+		return Result{Skipped: true, SkipReason: "only on " + ch.Arch}
+	}
+	if ch.Optional && ch.Command != "" {
+		if _, err := os.Stat(ch.Command); errors.Is(err, os.ErrNotExist) {
+			return Result{Skipped: true, SkipReason: "not present on this macOS"}
+		}
+	}
+
 	script := ch.Script
 	if script != "" {
 		var err error
@@ -121,6 +131,14 @@ func Run(ctx context.Context, ch catalog.Check, opts Options, out, errw io.Write
 	}
 	res.Err = runErr
 	return res
+}
+
+// hostArch returns the running CPU architecture in uname -m terms.
+func hostArch() string {
+	if runtime.GOARCH == "amd64" {
+		return "x86_64"
+	}
+	return runtime.GOARCH
 }
 
 func tee(buf *bytes.Buffer, w io.Writer) io.Writer {

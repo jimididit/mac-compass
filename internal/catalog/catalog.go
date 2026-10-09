@@ -30,6 +30,11 @@ type Check struct {
 	Sudo             bool     `yaml:"sudo"`
 	VMSafe           bool     `yaml:"vm_safe"`           // Safe to run in VM
 	RequiresHardware bool     `yaml:"requires_hardware"` // T2/Secure Enclave etc.
+	// Arch limits the check to one CPU architecture: "x86_64" or "arm64". Empty means any.
+	Arch string `yaml:"arch"`
+	// Optional marks a check whose binary may be absent on some macOS versions;
+	// a missing binary is reported as skipped, not failed.
+	Optional bool `yaml:"optional"`
 	// OKExit lists exit codes (besides 0) that mean the check ran fine, e.g. 1 for
 	// "grep found nothing" or "crontab: no crontab for user".
 	OKExit []int `yaml:"ok_exit"`
@@ -95,6 +100,9 @@ func (c *Catalog) Validate() error {
 		}
 		if (ch.Command == "") == (ch.Script == "") {
 			errs = append(errs, fmt.Errorf("%s: exactly one of command or script is required", where))
+		}
+		if ch.Arch != "" && ch.Arch != "x86_64" && ch.Arch != "arm64" {
+			errs = append(errs, fmt.Errorf("%s: arch must be x86_64 or arm64, got %q", where, ch.Arch))
 		}
 		if ch.Script != "" && len(ch.Args) > 0 {
 			errs = append(errs, fmt.Errorf("%s: args set together with script", where))

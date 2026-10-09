@@ -1,5 +1,10 @@
 # mac-compass check catalog (authored from reference doc detecting-compromise.md)
 # section: triage | processes | kernel | persistence | network | security-tools | advanced | harden
+#
+# Rules: every check is read-only; commands use absolute paths; each check appears once
+# across the whole catalog (run-all runs everything). ok_exit lists non-zero exit codes
+# that mean "ran fine" (e.g. grep found nothing). arch/optional gate checks that only
+# exist on some Macs.
 
 checks:
   # --- 1. Quick Triage ---
@@ -11,6 +16,14 @@ checks:
     sudo: false
     vm_safe: true
   - section: triage
+    name: SIP authenticated root
+    description: Sealed system volume status; expected "enabled"
+    command: /usr/bin/csrutil
+    args: [authenticated-root, status]
+    sudo: false
+    vm_safe: true
+    optional: true
+  - section: triage
     name: Gatekeeper status
     description: Verify Gatekeeper (assessments) is enabled
     command: /usr/sbin/spctl
@@ -19,26 +32,11 @@ checks:
     vm_safe: true
   - section: triage
     name: Non-Apple kernel extensions
-    description: List loaded KEXTs excluding Apple
-    script: kextstat | grep -v com.apple
+    description: Loaded kernel extensions not signed by Apple (kmutil; kextstat is deprecated)
+    script: /usr/bin/kmutil showloaded | grep -v com.apple
     sudo: false
     vm_safe: true
     ok_exit: [1]
-  - section: triage
-    name: All loaded KEXTs (detailed)
-    description: List all loaded kernel extensions with details
-    command: /usr/sbin/kextstat
-    args: [-l]
-    sudo: false
-    vm_safe: true
-  - section: triage
-    name: EFI integrity check
-    description: Check for modifications to critical system/firmware files
-    command: /usr/libexec/firmwarecheckers/eficheck/eficheck
-    args: [--integrity-check]
-    sudo: true
-    vm_safe: false
-    requires_hardware: true
   - section: triage
     name: LaunchDaemons
     description: Quick check /Library/LaunchDaemons/
@@ -75,13 +73,6 @@ checks:
     sudo: false
     vm_safe: true
   - section: processes
-    name: Listening TCP
-    description: Processes with listening TCP ports
-    command: /usr/sbin/lsof
-    args: [-i, TCP, -s, TCP:LISTEN, -n, -P]
-    sudo: true
-    vm_safe: true
-  - section: processes
     name: System launchctl DYLD
     description: Check for dyld env vars (dylib injection) in system domain
     script: launchctl print system | grep DYLD
@@ -91,19 +82,12 @@ checks:
 
   # --- 3. Kernel & Rootkit ---
   - section: kernel
-    name: Loaded KEXTs
-    description: List all loaded kernel extensions
-    command: /usr/sbin/kextstat
-    args: []
+    name: Loaded kernel extensions
+    description: All loaded kernel extensions (kmutil; kextstat is deprecated)
+    command: /usr/bin/kmutil
+    args: [showloaded]
     sudo: false
     vm_safe: true
-  - section: kernel
-    name: Non-Apple KEXTs
-    description: Unsigned or suspicious kernel extensions
-    script: kextstat | grep -v "com.apple" | grep -v "com.intel"
-    sudo: false
-    vm_safe: true
-    ok_exit: [1]
   - section: kernel
     name: System extensions
     description: Modern system extensions (replacement for KEXTs)
@@ -118,23 +102,19 @@ checks:
     args: [boot-args]
     sudo: false
     vm_safe: true
+    ok_exit: [1]
   - section: kernel
     name: EFI integrity
-    description: Firmware integrity check
+    description: Firmware integrity check (Intel Macs only; removed on newer macOS)
     command: /usr/libexec/firmwarecheckers/eficheck/eficheck
     args: [--integrity-check]
     sudo: true
     vm_safe: false
     requires_hardware: true
+    arch: x86_64
+    optional: true
 
   # --- 4. Persistence ---
-  - section: persistence
-    name: LaunchDaemons (full)
-    description: System-wide LaunchDaemons
-    command: /bin/ls
-    args: [-lah, /Library/LaunchDaemons/]
-    sudo: false
-    vm_safe: true
   - section: persistence
     name: System LaunchDaemons
     description: /System/Library/LaunchDaemons/
@@ -217,13 +197,6 @@ checks:
 
   # --- 6. Security tools ---
   - section: security-tools
-    name: Gatekeeper status
-    description: spctl status
-    command: /usr/sbin/spctl
-    args: [--status]
-    sudo: false
-    vm_safe: true
-  - section: security-tools
     name: FileVault status
     description: Disk encryption status
     command: /usr/bin/fdesetup
@@ -239,26 +212,20 @@ checks:
     sudo: true
     vm_safe: true
     ok_exit: [1]
-  - section: advanced
-    name: System extensions list
-    description: Loaded system extensions
-    command: /usr/bin/systemextensionsctl
-    args: [list]
-    sudo: false
-    vm_safe: true
 
   # --- 9. Harden (preventive) ---
   - section: harden
     name: Software update list
-    description: Available updates
+    description: Available updates (contacts Apple)
     command: /usr/sbin/softwareupdate
     args: [-l]
     sudo: false
     vm_safe: true
   - section: harden
-    name: Firewall state
-    description: Current firewall state
-    command: /usr/libexec/ApplicationFirewall/socketfilterfw
-    args: [--getglobalstate]
-    sudo: true
+    name: Automatic update settings
+    description: Software Update preferences (auto-check, auto-download, critical updates)
+    command: /usr/bin/defaults
+    args: [read, /Library/Preferences/com.apple.SoftwareUpdate]
+    sudo: false
     vm_safe: true
+    ok_exit: [1]

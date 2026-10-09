@@ -241,3 +241,31 @@ func TestExpandUserHome_OnlyWordLeading(t *testing.T) {
 		t.Errorf("got  %q\nwant %q", got, want)
 	}
 }
+
+func TestRun_ArchGate(t *testing.T) {
+	other := "arm64"
+	if hostArch() == "arm64" {
+		other = "x86_64"
+	}
+	ch := catalog.Check{Section: "test", Name: "arch", Command: "/nonexistent/x", Arch: other}
+	res := Run(context.Background(), ch, DefaultOptions(), nil, nil)
+	if !res.Skipped || res.Err != nil {
+		t.Fatalf("want skipped without error; got %+v", res)
+	}
+	ch.Arch = hostArch()
+	if res := Run(context.Background(), ch, DefaultOptions(), nil, nil); res.Skipped {
+		t.Fatal("matching arch must not be skipped")
+	}
+}
+
+func TestRun_OptionalMissingBinarySkipped(t *testing.T) {
+	ch := catalog.Check{Section: "test", Name: "opt", Command: "/nonexistent/binary/xyz", Optional: true}
+	res := Run(context.Background(), ch, DefaultOptions(), nil, nil)
+	if !res.Skipped || res.Err != nil {
+		t.Fatalf("want skipped without error; got %+v", res)
+	}
+	ch.Optional = false
+	if res := Run(context.Background(), ch, DefaultOptions(), nil, nil); res.Err == nil {
+		t.Fatal("non-optional missing binary must fail")
+	}
+}

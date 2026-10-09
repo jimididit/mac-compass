@@ -123,3 +123,39 @@ func TestExitOK(t *testing.T) {
 		t.Error("ExitOK mismatch")
 	}
 }
+
+func TestEmbeddedCatalog_NoDuplicateCommands(t *testing.T) {
+	cat, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]string{}
+	for _, ch := range cat.Checks {
+		sig := ch.Command + " " + strings.Join(ch.Args, " ") + "|" + ch.Script
+		if prev, dup := seen[sig]; dup {
+			t.Errorf("%s/%s duplicates %s", ch.Section, ch.Name, prev)
+		}
+		seen[sig] = ch.Section + "/" + ch.Name
+	}
+}
+
+func TestEmbeddedCatalog_NoDeprecatedTools(t *testing.T) {
+	cat, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ch := range cat.Checks {
+		all := ch.Command + " " + ch.Script
+		for _, bad := range []string{"kextstat", "kextcache", "repair_packages"} {
+			if strings.Contains(all, bad) {
+				t.Errorf("%s/%s uses deprecated/mutating %s", ch.Section, ch.Name, bad)
+			}
+		}
+	}
+}
+
+func TestParse_BadArch(t *testing.T) {
+	if _, err := Parse([]byte("checks:\n  - {section: triage, name: a, command: /bin/true, arch: ppc}\n")); err == nil {
+		t.Fatal("bad arch should be rejected")
+	}
+}
