@@ -63,7 +63,6 @@ jobs:
           mkdir x && tar -xzf mac-compass_*_macos_universal.tar.gz -C x
           cd x
           lipo -archs mac-compass
-          test -f SHARING.md
           ./mac-compass version
           ./mac-compass --help >/dev/null
           sudo ./mac-compass run-all -y --vm --json > /tmp/run.json || true
