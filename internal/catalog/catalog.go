@@ -20,7 +20,7 @@ var idRe = regexp.MustCompile(`^[a-z0-9-]+\.[a-z0-9-]+$`)
 var attackRe = regexp.MustCompile(`^T\d{4}(\.\d{3})?$`)
 
 // KnownBuiltins lists the in-process collectors a check may name. The runner must implement each.
-var KnownBuiltins = []string{"launchd-targets"}
+var KnownBuiltins = []string{"launchd-targets", "process-signatures"}
 
 // KnownSections lists the section ids a check may use.
 var KnownSections = []string{

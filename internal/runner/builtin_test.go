@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/jimididit/mac-compass/internal/catalog"
@@ -110,6 +111,7 @@ func TestScriptArg(t *testing.T) {
 
 // fakeSystem builds deps backed by in-memory plists and signing results.
 type fakeSystem struct {
+	mu      sync.Mutex
 	dirs    map[string][]string  // dir -> file names
 	plists  map[string]string    // plist path -> JSON
 	sign    map[string][2]string // target -> codesign output, spctl output
@@ -151,7 +153,9 @@ func (f *fakeSystem) deps(home string) deps {
 					}
 					return "", t + ": does not satisfy its designated Requirement", 3, nil
 				}
+				f.mu.Lock()
 				f.calls[t]++
+				f.mu.Unlock()
 				out := f.sign[t][0]
 				if strings.Contains(out, "not signed at all") {
 					return "", out, 1, nil
@@ -258,5 +262,90 @@ func TestEveryKnownBuiltinIsImplemented(t *testing.T) {
 	}
 	if len(builtins) != len(catalog.KnownBuiltins) {
 		t.Errorf("builtins (%d) and catalog.KnownBuiltins (%d) differ", len(builtins), len(catalog.KnownBuiltins))
+	}
+}
+
+func TestParseProcessList(t *testing.T) {
+	out := `root     /sbin/launchd
+root     /usr/libexec/xpcproxy
+me       /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+me       /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+me       -zsh
+root     (sd-pam)
+_windowserver /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer
+`
+	got := parseProcessList(out)
+	if len(got) != 4 {
+		t.Fatalf("want 4 absolute-path programs, got %d: %+v", len(got), got)
+	}
+	chrome := got["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
+	if chrome.count != 2 || chrome.userList() != "me" {
+		t.Errorf("paths with spaces must group: %+v", chrome)
+	}
+	if got["/sbin/launchd"].userList() != "root" {
+		t.Errorf("users: %+v", got["/sbin/launchd"])
+	}
+}
+
+func TestProcessSignatures(t *testing.T) {
+	f := &fakeSystem{
+		calls:  map[string]int{},
+		exists: map[string]bool{"/sbin/launchd": true, "/tmp/.evil": true, "/Users/me/tool": true, "/Applications/Foo.app/Contents/MacOS/Foo": true},
+		sign: map[string][2]string{
+			"/sbin/launchd":  {tahoeAppleCodesign, ""},
+			"/tmp/.evil":     {"/tmp/.evil: code object is not signed at all", ""},
+			"/Users/me/tool": {adhocCodesign, ""},
+			"/Applications/Foo.app/Contents/MacOS/Foo": {devIDCodesign, "notarized"},
+		},
+	}
+	dd := f.deps("/Users/me")
+	inner := dd.exec
+	dd.exec = func(ctx context.Context, argv ...string) (string, string, int, error) {
+		if argv[0] == "/bin/ps" {
+			return "root /sbin/launchd\nme /tmp/.evil\nroot /Users/me/tool\nme /Applications/Foo.app/Contents/MacOS/Foo\nme /opt/deleted/app\nme -zsh\n", "", 0, nil
+		}
+		return inner(ctx, argv...)
+	}
+	out, err := processSignatures(context.Background(), dd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := strings.Split(strings.TrimSpace(out), "\n")
+	if rows[0] != ProcessHeader {
+		t.Fatalf("header = %q", rows[0])
+	}
+	by := map[string][]string{}
+	for _, r := range rows[1:] {
+		c := strings.Split(r, "\t")
+		if len(c) != 8 {
+			t.Fatalf("row has %d columns: %q", len(c), r)
+		}
+		by[c[1]] = c
+	}
+	// columns: users path count state team signer notarization flags
+	if by["/sbin/launchd"][3] != "apple" {
+		t.Errorf("launchd: %v", by["/sbin/launchd"])
+	}
+	if by["/tmp/.evil"][3] != "unsigned" || !strings.Contains(by["/tmp/.evil"][7], "temp-location") {
+		t.Errorf("evil: %v", by["/tmp/.evil"])
+	}
+	if by["/Users/me/tool"][3] != "adhoc" || !strings.Contains(by["/Users/me/tool"][7], "root-from-user-dir") {
+		t.Errorf("root from user dir: %v", by["/Users/me/tool"])
+	}
+	if by["/Applications/Foo.app/Contents/MacOS/Foo"][6] != "notarized" {
+		t.Errorf("foo: %v", by["/Applications/Foo.app/Contents/MacOS/Foo"])
+	}
+	if by["/opt/deleted/app"][3] != "missing" {
+		t.Errorf("a running program whose file is gone: %v", by["/opt/deleted/app"])
+	}
+	if _, ok := by["-zsh"]; ok {
+		t.Error("login shells must not appear")
+	}
+}
+
+func TestProcessSignatures_PsFailure(t *testing.T) {
+	d := deps{exec: func(ctx context.Context, argv ...string) (string, string, int, error) { return "", "boom", 1, nil }}
+	if _, err := processSignatures(context.Background(), d); err == nil {
+		t.Error("a failing ps must be an error, not an empty success")
 	}
 }

@@ -5,6 +5,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
+- Code-signing analysis of running programs: each distinct program currently running, with its signature and
+  notarization state. Flags programs started from temporary or hidden locations, root processes run from a
+  user's home folder, programs deleted while still running, and unsigned programs.
 - Code-signing analysis of launch items: the program each LaunchDaemon and LaunchAgent runs, with its signature
   and notarization state. Flags programs in temporary or hidden locations, unsigned or ad-hoc signed programs,
   missing programs and inline scripts; `compare` reports new items and changes of signing team.
