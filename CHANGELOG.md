@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-09
+
 ### Added
 - `collect` writes a hashed evidence bundle (report, snapshot, findings and the raw output of every check, with a
   SHA-256 manifest) and `verify` checks one later, optionally against a hash recorded off the machine.
@@ -13,6 +15,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Code-signing analysis of launch items: the program each LaunchDaemon and LaunchAgent runs, with its signature
   and notarization state. Flags programs in temporary or hidden locations, unsigned or ad-hoc signed programs,
   missing programs and inline scripts; `compare` reports new items and changes of signing team.
+
+### Changed
+- The catalog now has 48 read-only checks. Release archives contain the binary, README and LICENSE.
 
 ## [0.2.0] - 2026-10-09
 
