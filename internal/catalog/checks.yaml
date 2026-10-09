@@ -152,11 +152,12 @@ checks:
     ok_exit: [1]
   - section: persistence
     name: Periodic daily
-    description: /etc/periodic/daily/
+    description: /etc/periodic/daily/ (absent on newer macOS, e.g. 26; absence is normal)
     command: /bin/ls
     args: [-la, /etc/periodic/daily/]
     sudo: false
     vm_safe: true
+    ok_exit: [1]
 
   # --- 5. Network ---
   - section: network
