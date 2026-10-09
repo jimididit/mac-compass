@@ -51,3 +51,6 @@ report.txt
 *.swp
 *~
 .cursorindexingignore
+
+# GoReleaser output
+/dist/
