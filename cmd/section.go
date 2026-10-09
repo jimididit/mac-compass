@@ -15,6 +15,7 @@ import (
 	"github.com/jimididit/mac-compass/internal/output"
 	"github.com/jimididit/mac-compass/internal/redact"
 	"github.com/jimididit/mac-compass/internal/runner"
+	"github.com/jimididit/mac-compass/internal/suppress"
 	"github.com/spf13/cobra"
 )
 
@@ -174,6 +175,9 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 		Sections:      sections,
 		Findings:      findings.Evaluate(sections),
 	}
+	if err := applySuppressions(&rep); err != nil {
+		return err
+	}
 	rep.Summarize()
 	red.Report(&rep)
 
@@ -212,6 +216,21 @@ func parseFailOn(s string) (output.Severity, error) {
 	return sev, nil
 }
 
+// applySuppressions moves findings accepted in the --suppress file out of the active results.
+func applySuppressions(rep *output.Report) error {
+	if suppressFile == "" {
+		return nil
+	}
+	rules, err := suppress.Load(suppressFile)
+	if err != nil {
+		return fmt.Errorf("--suppress %s: %w", suppressFile, err)
+	}
+	res := suppress.Apply(rules, rep.Findings, time.Now())
+	rep.Findings = append(res.Kept, res.Notices...)
+	rep.Suppressed = res.Suppressed
+	return nil
+}
+
 // writeFindings prints the human-readable findings summary.
 func writeFindings(w io.Writer, rep output.Report) {
 	fmt.Fprint(w, "\n========== Findings ==========\n")
@@ -235,6 +254,12 @@ func writeFindings(w io.Writer, rep output.Report) {
 	}
 	if shown == 0 {
 		fmt.Fprintln(w, "No findings.")
+	}
+	if n := len(rep.Suppressed); n > 0 {
+		fmt.Fprintf(w, "\n%d finding(s) accepted by your suppressions file:\n", n)
+		for _, s := range rep.Suppressed {
+			fmt.Fprintf(w, "    %s: %s (%s)\n", s.ID, s.Title, s.Reason)
+		}
 	}
 	s := rep.Summary
 	var sev []string

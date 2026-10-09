@@ -3,6 +3,8 @@ package cmd
 import (
 	"bytes"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -75,5 +77,47 @@ func TestWriteFindings_None(t *testing.T) {
 	writeFindings(&buf, output.Report{})
 	if !strings.Contains(buf.String(), "No findings.") {
 		t.Errorf("want 'No findings.': %s", buf.String())
+	}
+}
+
+func TestApplySuppressions(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "s.yaml")
+	if err := os.WriteFile(path, []byte("suppressions:\n  - {id: network.firewall, reason: 'MDM manages it'}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	rep := output.Report{Findings: []output.Finding{
+		{ID: "network.firewall", Status: output.StatusFail, Severity: output.SeverityMedium, Title: "Application firewall is off"},
+		{ID: "triage.sip", Status: output.StatusFail, Severity: output.SeverityHigh, Title: "SIP disabled"},
+	}}
+	suppressFile = path
+	defer func() { suppressFile = "" }()
+	if err := applySuppressions(&rep); err != nil {
+		t.Fatal(err)
+	}
+	rep.Summarize()
+	if len(rep.Findings) != 1 || rep.Findings[0].ID != "triage.sip" || rep.Summary.Suppressed != 1 || rep.Summary.FailBySeverity[output.SeverityMedium] != 0 {
+		t.Errorf("suppressed finding must leave the summary and fail-on: %+v", rep)
+	}
+	var buf bytes.Buffer
+	writeFindings(&buf, rep)
+	if !strings.Contains(buf.String(), "1 finding(s) accepted") || !strings.Contains(buf.String(), "MDM manages it") {
+		t.Errorf("accepted findings must be listed with their reason:\n%s", buf.String())
+	}
+	if err := exitError(&cobra.Command{}, rep, output.SeverityHigh); err == nil {
+		t.Error("the remaining high finding must still trip --fail-on high")
+	}
+	only := output.Report{Findings: []output.Finding{{ID: "network.firewall", Status: output.StatusFail, Severity: output.SeverityMedium, Title: "off"}}}
+	if err := applySuppressions(&only); err != nil {
+		t.Fatal(err)
+	}
+	only.Summarize()
+	if err := exitError(&cobra.Command{}, only, output.SeverityMedium); err != nil {
+		t.Errorf("an accepted medium finding must not trip --fail-on medium: %v", err)
+	}
+
+	suppressFile = filepath.Join(dir, "missing.yaml")
+	if err := applySuppressions(&rep); err == nil {
+		t.Error("a missing suppressions file must be an error, not silently ignored")
 	}
 }

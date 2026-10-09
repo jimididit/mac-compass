@@ -96,6 +96,9 @@ var compareCmd = &cobra.Command{
 			SudoEnabled:   cur.SudoEnabled,
 			Findings:      res.Findings,
 		}
+		if err := applySuppressions(&rep); err != nil {
+			return err
+		}
 		rep.Summarize()
 		red.Report(&rep)
 		if jsonOutput {

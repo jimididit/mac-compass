@@ -1,0 +1,13 @@
+# Findings you have reviewed and accepted. Use with:  mac-compass run-all --suppress suppressions.yaml
+# Accepted findings leave the active results (and --fail-on) but stay listed in the report with the
+# reason you give, so nothing is silently hidden.
+suppressions:
+  # Accept every finding from one check.
+  - id: network.firewall
+    reason: Managed by our MDM profile; verified 2026-10-01
+    expires: 2027-01-01          # optional; after this day the rule stops applying and a notice appears
+
+  # Accept only the detail lines that contain "match"; any other item in the same finding is still shown.
+  - id: security-tools.tcc-system
+    match: /usr/bin/osascript
+    reason: Our automation tooling needs Accessibility; reviewed

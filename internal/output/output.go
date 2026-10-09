@@ -94,6 +94,12 @@ type HostInfo struct {
 	Arch         string `json:"arch"`
 }
 
+// Suppressed is a finding the user accepted in a suppressions file, with the reason they gave.
+type Suppressed struct {
+	Finding
+	Reason string `json:"reason"`
+}
+
 // Summary counts findings by outcome.
 type Summary struct {
 	Pass            int              `json:"pass"`
@@ -105,6 +111,7 @@ type Summary struct {
 	ChecksOK        int              `json:"checks_ok"`
 	ChecksSkipped   int              `json:"checks_skipped"`
 	ChecksFailed    int              `json:"checks_failed"`
+	Suppressed      int              `json:"suppressed"`
 }
 
 // Report is the complete JSON document for a run.
@@ -118,6 +125,7 @@ type Report struct {
 	VMMode        bool            `json:"vm_mode"`
 	Sections      []SectionResult `json:"sections"`
 	Findings      []Finding       `json:"findings"`
+	Suppressed    []Suppressed    `json:"suppressed,omitempty"`
 	Summary       Summary         `json:"summary"`
 }
 
@@ -152,6 +160,7 @@ func (r *Report) Summarize() {
 			}
 		}
 	}
+	s.Suppressed = len(r.Suppressed)
 	r.Summary = s
 }
 

@@ -100,9 +100,10 @@ func evalAuthorizedKeys(r output.CheckResult) []output.Finding {
 	if len(keys) == 0 {
 		return []output.Finding{pass("accounts.ssh-authorized-keys", "No SSH authorized keys for this user")}
 	}
-	return []output.Finding{info("accounts.ssh-authorized-keys",
-		fmt.Sprintf("%d SSH authorized key(s) can log in as this user", len(keys)),
-		strings.Join(keys, "\n")+"\nConfirm you recognise every key; an unknown key is a persistent remote-access backdoor.")}
+	f := info("accounts.ssh-authorized-keys",
+		fmt.Sprintf("%d SSH authorized key(s) can log in as this user", len(keys)), strings.Join(keys, "\n"))
+	f.Remediation = "Confirm you recognise every key; an unknown key is a persistent remote-access backdoor."
+	return []output.Finding{f}
 }
 
 func evalLoginHooks(r output.CheckResult) []output.Finding {
@@ -111,8 +112,8 @@ func evalLoginHooks(r output.CheckResult) []output.Finding {
 		return []output.Finding{pass("persistence.login-hooks", "No login or logout hooks")}
 	}
 	return []output.Finding{fail("persistence.login-hooks", output.SeverityHigh, "Login/logout hook is configured",
-		strings.Join(hooks, "\n")+"\nThese run a script as root at every login or logout and are deprecated; legitimate use is rare.",
-		"Remove with: sudo defaults delete com.apple.loginwindow LoginHook (or LogoutHook)")}
+		strings.Join(hooks, "\n"),
+		"These run a script as root at every login or logout and are deprecated; legitimate use is rare. Remove with: sudo defaults delete com.apple.loginwindow LoginHook (or LogoutHook)")}
 }
 
 var defaultHosts = map[string]bool{"127.0.0.1 localhost": true, "255.255.255.255 broadcasthost": true, "::1 localhost": true}
@@ -167,8 +168,8 @@ func evalProxy(r output.CheckResult) []output.Finding {
 		detail = append(detail, "PAC URL: "+m[1])
 	}
 	return []output.Finding{fail("network.proxy", output.SeverityLow, "A system proxy is configured",
-		strings.Join(detail, "\n")+"\nA proxy sees (and can alter) traffic. Expected on managed networks; otherwise suspicious.",
-		"Review System Settings > Network > (your connection) > Details > Proxies.")}
+		strings.Join(detail, "\n"),
+		"A proxy sees (and can alter) traffic: expected on managed networks, otherwise suspicious. Review System Settings > Network > (your connection) > Details > Proxies.")}
 }
 
 func evalXProtect(r output.CheckResult) []output.Finding {
@@ -183,13 +184,17 @@ func evalProfiles(r output.CheckResult) []output.Finding {
 	if out == "" || strings.Contains(strings.ToLower(out), "no configuration profiles") {
 		return []output.Finding{pass("security-tools.profiles", "No configuration profiles are installed")}
 	}
-	return []output.Finding{info("security-tools.profiles", "Configuration profiles are installed", out+"\nProfiles can set proxies, certificates, VPNs and restrictions; confirm each is expected.")}
+	f := info("security-tools.profiles", "Configuration profiles are installed", out)
+	f.Remediation = "Profiles can set proxies, certificates, VPNs and restrictions; confirm each is expected."
+	return []output.Finding{f}
 }
 
 func evalMDM(r output.CheckResult) []output.Finding {
 	out := strings.ToLower(r.Stdout)
 	if strings.Contains(out, "mdm enrollment: yes") || strings.Contains(out, "enrolled via dep: yes") {
-		return []output.Finding{info("security-tools.mdm-enrollment", "This Mac is enrolled in device management (MDM)", strings.TrimSpace(r.Stdout)+"\nAn MDM server can install software and change settings remotely.")}
+		f := info("security-tools.mdm-enrollment", "This Mac is enrolled in device management (MDM)", strings.TrimSpace(r.Stdout))
+		f.Remediation = "An MDM server can install software and change settings remotely."
+		return []output.Finding{f}
 	}
 	return []output.Finding{pass("security-tools.mdm-enrollment", "This Mac is not enrolled in MDM")}
 }
