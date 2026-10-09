@@ -5,6 +5,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
+- `monitor` runs the baseline comparison on a schedule through launchd (`install`, `status`, `run`, `uninstall`),
+  alerting once when the set of serious new findings changes. A root daemon is refused unless the binary and its
+  folders are root-owned and not writable by others.
 - `--html` writes a self-contained HTML report (no scripts, no network requests) and `--sarif` writes SARIF 2.1.0;
   `collect` now stores `report.html` in the evidence bundle.
 

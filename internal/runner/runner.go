@@ -251,14 +251,15 @@ func ExpandUserHome(script string) (string, error) {
 	if !strings.Contains(script, "~") {
 		return script, nil
 	}
-	home, err := invokingUserHome()
+	home, err := InvokingUserHome()
 	if err != nil {
 		return script, err
 	}
 	return tildeRe.ReplaceAllString(script, "${1}"+strings.ReplaceAll(home, "$", "$$")+"${2}"), nil
 }
 
-func invokingUserHome() (string, error) {
+// InvokingUserHome is the home folder of the user who ran the tool, or of the sudo caller when run under sudo.
+func InvokingUserHome() (string, error) {
 	if os.Geteuid() == 0 {
 		if name := os.Getenv("SUDO_USER"); name != "" && name != "root" {
 			if u, err := user.Lookup(name); err == nil && u.HomeDir != "" {
