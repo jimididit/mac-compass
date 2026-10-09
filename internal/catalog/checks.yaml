@@ -230,13 +230,6 @@ checks:
     args: [status]
     sudo: true
     vm_safe: true
-  - section: security-tools
-    name: Repair packages verify
-    description: Verify system file integrity
-    command: /usr/libexec/repair_packages
-    args: [--verify, --standard-pkgs]
-    sudo: true
-    vm_safe: true
 
   # --- 7. Advanced ---
   - section: advanced

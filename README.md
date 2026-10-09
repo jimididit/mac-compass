@@ -10,7 +10,7 @@
 
 ## Install
 
-### From source (Go 1.21+)
+### From source (Go 1.24+)
 
 ```bash
 git clone https://github.com/jimididit/mac-compass.git
