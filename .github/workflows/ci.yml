@@ -104,6 +104,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          # staticcheck@latest needs a newer Go than go.mod; setup-go v7 pins GOTOOLCHAIN=local.
-          go-version: stable
-      - run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+          go-version-file: go.mod
+      # Pinned: staticcheck must be built by a Go release it understands (2025.1.1 = Go 1.24).
+      # Bump this together with the go directive in go.mod.
+      - run: go run honnef.co/go/tools/cmd/staticcheck@v0.6.1 ./...
