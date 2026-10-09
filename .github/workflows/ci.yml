@@ -61,6 +61,8 @@ jobs:
           sudo ./mac-compass snapshot --vm -o out/snap-b.json
           sudo ./mac-compass compare out/snap-a.json out/snap-b.json --json > out/compare-planted.json || true
           rm -f "$HOME/Library/LaunchAgents/com.example.compass-ci-test.plist"
+          # Snapshots are root-owned 0600 (by design); hand them to the runner user so they can be uploaded.
+          sudo chown "$(id -un)" out/snap-a.json out/snap-b.json
           # The planted LaunchAgent must be reported as new; this proves snapshot+compare end to end.
           jq -e '.findings[] | select(.id=="persistence.launchagents-user" and .status=="fail" and (.detail|contains("com.example.compass-ci-test.plist")))' out/compare-planted.json
       - name: summary
