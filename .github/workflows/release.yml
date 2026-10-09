@@ -28,6 +28,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: attest build provenance
+        # Attestations need a public repo (or GitHub Enterprise Cloud); skip while this repo is private.
+        if: ${{ !github.event.repository.private }}
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
