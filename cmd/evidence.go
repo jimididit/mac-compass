@@ -11,6 +11,7 @@ import (
 	"github.com/jimididit/mac-compass/internal/evidence"
 	"github.com/jimididit/mac-compass/internal/output"
 	"github.com/jimididit/mac-compass/internal/redact"
+	"github.com/jimididit/mac-compass/internal/render"
 	"github.com/jimididit/mac-compass/internal/runner"
 	"github.com/spf13/cobra"
 )
@@ -68,6 +69,9 @@ var collectCmd = &cobra.Command{
 			red.Report(&in.Report)
 			red.Snapshot(&in.Snapshot)
 			in.Redact = red.String
+		}
+		if page, err := render.HTML(in.Report); err == nil {
+			in.HTML = page
 		}
 		dir := collectOut
 		if dir == "" {

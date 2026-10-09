@@ -190,3 +190,25 @@ func TestDuplicateIDsDoNotOverwrite(t *testing.T) {
 		t.Errorf("want two distinct raw files for a repeated id, got %d", n)
 	}
 }
+
+func TestWriteIncludesHTMLWhenGiven(t *testing.T) {
+	in := sample()
+	in.HTML = []byte("<!doctype html><title>x</title>")
+	dir := filepath.Join(t.TempDir(), "b")
+	m, _, err := Write(dir, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, f := range m.Files {
+		if f.Path == "report.html" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("report.html must be hashed into the manifest")
+	}
+	if r, err := Verify(dir); err != nil || !r.OK() {
+		t.Errorf("%+v %v", r, err)
+	}
+}

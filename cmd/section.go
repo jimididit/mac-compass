@@ -14,6 +14,7 @@ import (
 	"github.com/jimididit/mac-compass/internal/findings"
 	"github.com/jimididit/mac-compass/internal/output"
 	"github.com/jimididit/mac-compass/internal/redact"
+	"github.com/jimididit/mac-compass/internal/render"
 	"github.com/jimididit/mac-compass/internal/runner"
 	"github.com/jimididit/mac-compass/internal/suppress"
 	"github.com/spf13/cobra"
@@ -170,6 +171,9 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 	}
 	rep.Summarize()
 	red.Report(&rep)
+	if err := writeExtraReports(rep); err != nil {
+		return err
+	}
 
 	if jsonOutput {
 		if err := output.WriteJSON(cmd.OutOrStdout(), rep); err != nil {
@@ -179,6 +183,34 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 		writeFindings(opts.OutWriter, rep)
 	}
 	return exitError(cmd, rep, threshold)
+}
+
+// writeExtraReports writes the --html and --sarif outputs, if requested. Reports hold host details,
+// so the files are private to the user.
+func writeExtraReports(rep output.Report) error {
+	write := func(path string, render func(output.Report) ([]byte, error)) error {
+		if path == "" {
+			return nil
+		}
+		data, err := render(rep)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(path, data, 0o600); err != nil {
+			return err
+		}
+		if err := os.Chmod(path, 0o600); err != nil && runtime.GOOS != "windows" {
+			return err
+		}
+		return nil
+	}
+	if err := write(htmlPath, render.HTML); err != nil {
+		return fmt.Errorf("--html: %w", err)
+	}
+	if err := write(sarifPath, render.SARIF); err != nil {
+		return fmt.Errorf("--sarif: %w", err)
+	}
+	return nil
 }
 
 // buildReport assembles the report for a finished run, with findings evaluated.

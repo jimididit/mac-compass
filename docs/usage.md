@@ -30,6 +30,8 @@ These work on every command that runs checks.
 | `--report <path>` | Also append the text output to a file (mode `0600`) |
 | `--fail-on <severity>` | Exit `2` if any finding is at or above `info`, `low`, `medium`, `high` or `critical` |
 | `--suppress <file>` | Accept reviewed findings ([details](baseline.md#accepting-reviewed-findings)) |
+| `--html <file>` | Also write a self-contained HTML report ([details](#report-formats)) |
+| `--sarif <file>` | Also write a SARIF 2.1.0 report ([details](#report-formats)) |
 | `--redact` | Mask the host name and your user name in output, reports and snapshots |
 
 ## Reading the results
@@ -63,6 +65,27 @@ you have reviewed.
 }
 ```
 
+## Report formats
+
+Besides the terminal output and `--json`, any run can also write:
+
+- **`--html report.html`**: one self-contained page you can open in a browser, print, or send. Findings are
+  grouped by severity with the fix and ATT&CK links, followed by accepted findings and a table of every
+  check. It contains no scripts and makes no network requests, and a content-security policy enforces that,
+  so text from the examined Mac (file names, process names) cannot do anything when the page is opened.
+- **`--sarif report.sarif`**: [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/) for tools that
+  ingest it (viewers, DefectDojo and similar). Each finding is a result with a stable fingerprint, a level
+  (`error` for high and critical, `warning` for medium, `note` otherwise) and its ATT&CK ids as tags. Findings
+  describe a machine rather than source files, so they carry the host as a logical location; GitHub code
+  scanning, which needs file locations, will not display them. Passing findings are left out.
+
+Both files are written with mode `0600`, honour `--redact` and `--suppress`, and also work with `compare`.
+`collect` stores `report.html` in the evidence bundle automatically.
+
+```bash
+sudo mac-compass run-all -y --html report.html --sarif report.sarif
+```
+
 ## Evidence bundles
 
 `mac-compass collect` runs every check once and writes a folder you can keep or hand to someone else:
@@ -70,6 +93,7 @@ you have reviewed.
 ```text
 mac-compass-evidence-20261009T151500Z/
   report.json       the full report: every check's raw result, findings, summary
+  report.html       the same findings as a page you can open and share
   snapshot.json     the baseline snapshot, ready for `compare`
   findings.txt      the findings as printed in the terminal
   raw/<check-id>.txt  stdout, stderr, exit code and timing of each check

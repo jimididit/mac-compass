@@ -49,10 +49,15 @@ jobs:
           mkdir out
           sw_vers | tee out/sw_vers.txt
           uname -m | tee out/uname.txt
-          sudo ./mac-compass run-all -y --vm --json > out/run-all.json; echo "run-all exit=$?" | tee -a out/exit.txt
+          sudo ./mac-compass run-all -y --vm --json --html out/report.html --sarif out/report.sarif > out/run-all.json; echo "run-all exit=$?" | tee -a out/exit.txt
           # Unprivileged pass: proves checks marked sudo:false really work as a normal user.
           ./mac-compass run-all -y --vm --no-sudo --json > out/run-all-nosudo.json; echo "nosudo exit=$?" | tee -a out/exit.txt
           test -s out/run-all.json && test -s out/run-all-nosudo.json
+          sudo chown "$(id -un)" out/report.html out/report.sarif
+          # Report formats: SARIF is well-formed and HTML is inert.
+          jq -e '.version == "2.1.0" and (.runs[0].results | type == "array") and (.runs[0].tool.driver.rules | length) > 0' out/report.sarif >/dev/null
+          grep -q "Content-Security-Policy" out/report.html
+          ! grep -qi "<script" out/report.html
       - name: baseline (snapshot, plant a change, compare)
         run: |
           set -e
