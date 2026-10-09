@@ -35,8 +35,7 @@ Install the latest release from Terminal. Downloads made with `curl` are not fla
 
 ```bash
 mkdir mac-compass && cd mac-compass
-VER=$(curl -fsSL https://api.github.com/repos/jimididit/mac-compass/releases/latest | grep -m1 '"tag_name"' | cut -d'"' -f4)
-curl -fsSL "https://github.com/jimididit/mac-compass/releases/download/${VER}/mac-compass_${VER#v}_macos_universal.tar.gz" | tar -xz
+curl -fsSL https://github.com/jimididit/mac-compass/releases/latest/download/mac-compass_macos_universal.tar.gz | tar -xz
 ./mac-compass triage --no-sudo          # quick look, no password needed
 sudo ./mac-compass run-all -y           # the full check
 ```

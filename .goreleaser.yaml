@@ -41,6 +41,12 @@ archives:
     formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_macos_universal"
     files: [LICENSE, README.md]
+  # The same archive under a name without the version, so /releases/latest/download/<name> always works.
+  - id: universal-latest
+    ids: [universal]
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_macos_universal"
+    files: [LICENSE, README.md]
   - id: per-arch
     ids: [mac-compass]
     formats: [tar.gz]

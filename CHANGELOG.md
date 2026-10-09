@@ -4,7 +4,14 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-09
+
+### Added
+- Each release also publishes the universal archive without a version in its name
+  (`mac-compass_macos_universal.tar.gz`), so `releases/latest/download/` gives a one-line install.
+
 ### Changed
+- The Homebrew formula installs the release archive (no Go toolchain needed).
 - Install instructions lead with a `curl` install, which macOS does not quarantine, and explain the one-time prompt
   for browser downloads (the binary is signed but not yet notarized).
 
