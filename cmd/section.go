@@ -368,6 +368,9 @@ func writePosture(w io.Writer, rep output.Report) {
 			if f.Detail != "" {
 				fmt.Fprintf(w, "    %s\n", f.Detail)
 			}
+			if f.Remediation != "" {
+				fmt.Fprintf(w, "    fix: %s\n", f.Remediation)
+			}
 		}
 	}
 	fmt.Fprintf(w, "\nScore: %d/100 (%d pass, %d fail, %d accepted, %d not assessed)\n", p.Score, p.Passed, p.Failed, p.Accepted, p.NotAssessed)
