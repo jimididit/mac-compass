@@ -59,6 +59,15 @@ jobs:
           jq -e '.version == "2.1.0" and (.runs[0].results | type == "array") and (.runs[0].tool.driver.rules | length) > 0' out/report.sarif >/dev/null
           grep -q "Content-Security-Policy" out/report.html
           ! grep -qi "<script" out/report.html
+      - name: posture (score is computed and shown in text, JSON and HTML)
+        run: |
+          set +e
+          sudo ./mac-compass posture --vm > out/posture.txt 2> out/posture-stderr.txt; echo "posture exit=$?" | tee -a out/exit.txt
+          set -e
+          cat out/posture.txt
+          grep -q "Score: " out/posture.txt
+          jq -e '.posture | (.controls | length) >= 16 and (.passed + .failed) > 0 and .score >= 0 and .score <= 100' out/run-all.json
+          grep -q "Hardening posture" out/report.html
       - name: baseline (snapshot, plant a change, compare)
         run: |
           set -e
@@ -114,6 +123,7 @@ jobs:
             echo "**baseline, untouched machine (should be near-empty)**: $(jq -r '.summary | "\(.fail) fail, \(.info) info"' out/compare-untouched.json)"
             jq -r '.findings[] | select(.status=="fail") | "- \(.severity) \(.id): \(.title)"' out/compare-untouched.json
             echo "### $(sw_vers -productName) $(sw_vers -productVersion) ($(uname -m)) on ${{ matrix.os }}"
+            echo "**posture**: $(jq -r '.posture | "\(.score)/100 (\(.passed) pass, \(.failed) fail, \(.not_assessed) not assessed)"' out/run-all.json)"
             for f in run-all run-all-nosudo; do
               echo "**$f**: $(jq -r '.summary | "\(.checks_ok) ok, \(.checks_skipped) skipped, \(.checks_failed) failed checks; findings: \(.fail) fail, \(.pass) pass, \(.info) info, \(.error) error"' out/$f.json)"
               jq -r '.sections[].checks[] | select((.ok|not) and (.skipped|not)) | "- CHECK FAILED \(.id): \(.error) \(.stderr|gsub("\n";" ")|.[0:120])"' out/$f.json

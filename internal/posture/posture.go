@@ -27,13 +27,16 @@ var Controls = []Control{
 	{"triage.gatekeeper", "Gatekeeper is on", 3, "os_gatekeeper_enable", "Run: sudo spctl --global-enable"},
 	{"security-tools.filevault", "FileVault disk encryption is on", 3, "system_settings_filevault_enforce", "System Settings > Privacy & Security > FileVault"},
 	{"network.firewall", "Application firewall is on", 2, "system_settings_firewall_enable", "System Settings > Network > Firewall"},
+	{"network.firewall-stealth", "Firewall stealth mode is on", 1, "system_settings_firewall_stealth_mode_enable", "System Settings > Network > Firewall > Options"},
 	{"accounts.guest", "Guest account is off", 2, "system_settings_guest_account_disable", "System Settings > Users & Groups"},
 	{"accounts.autologin", "Automatic login is off", 2, "system_settings_automatic_login_disable", "System Settings > Users & Groups"},
-	{"harden.auto-update-settings", "Automatic security updates are on", 2, "system_settings_critical_update_install_enforce", "System Settings > General > Software Update > Automatic Updates"},
+	{"harden.auto-update-settings", "Automatic software updates are on", 2, "system_settings_critical_update_install_enforce", "System Settings > General > Software Update > Automatic Updates"},
 	{"harden.softwareupdate-list", "macOS is up to date", 1, "", "System Settings > General > Software Update"},
 	{"kernel.nvram-boot-args", "No weakening NVRAM boot-args", 2, "", "Run: sudo nvram -d boot-args"},
 	{"processes.launchctl-dyld", "No DYLD variables in the launchd domain", 2, "", ""},
 	{"persistence.login-hooks", "No login or logout hooks", 2, "", ""},
+	{"persistence.sudoers-d", "No custom sudoers drop-ins", 1, "", "Review /etc/sudoers.d; a NOPASSWD rule grants root without a password"},
+	{"triage.kext-non-apple", "No non-Apple kernel extensions are loaded", 1, "", "Remove the software that installed the extension"},
 	{"network.listening-tcp", "No remote-access services reachable", 1, "", "System Settings > General > Sharing"},
 }
 

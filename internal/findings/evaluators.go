@@ -235,20 +235,44 @@ func plistValue(s, key string) (string, bool) {
 	return m[1], true
 }
 
+// autoUpdateKeys are the Software Update switches that matter for security. A key that is not set keeps
+// its default, which is on, so only an explicit 0 counts as off.
+var autoUpdateKeys = []struct{ key, what string }{
+	{"AutomaticCheckEnabled", "check for updates"},
+	{"AutomaticDownload", "download updates"},
+	{"CriticalUpdateInstall", "install security responses"},
+	{"ConfigDataInstall", "install system data files"},
+}
+
 func evalAutoUpdate(r output.CheckResult) []output.Finding {
 	var off []string
-	for _, key := range []string{"CriticalUpdateInstall", "ConfigDataInstall"} {
-		if v, ok := plistValue(r.Stdout, key); ok && v == "0" {
-			off = append(off, key)
+	for _, k := range autoUpdateKeys {
+		if v, ok := plistValue(r.Stdout, k.key); ok && v == "0" {
+			off = append(off, k.what)
 		}
 	}
 	if len(off) == 0 {
-		return []output.Finding{pass("harden.auto-update-settings", "Automatic security and system-data updates are on")}
+		return []output.Finding{pass("harden.auto-update-settings", "Automatic updates are on")}
 	}
 	return []output.Finding{fail("harden.auto-update-settings", output.SeverityLow,
-		"Automatic security updates are off ("+strings.Join(off, ", ")+")",
-		"Security responses and system data files (for example XProtect definitions) will not install automatically.",
-		"Turn on 'Install Security Responses and system files' in System Settings > General > Software Update > Automatic Updates.")}
+		"Automatic updates are off for: "+strings.Join(off, ", "),
+		"Security responses and system data files (for example XProtect definitions) install only if you do it yourself.",
+		"Turn these on in System Settings > General > Software Update > Automatic Updates (the 'i' button).")}
+}
+
+// evalStealth reads the firewall's stealth mode, which makes the Mac ignore probes such as ping and port scans.
+// The wording differs between macOS releases ("Stealth mode enabled", "Firewall stealth mode is on").
+func evalStealth(r output.CheckResult) []output.Finding {
+	out := strings.ToLower(r.Stdout)
+	switch {
+	case strings.Contains(out, "disabled"), strings.Contains(out, "is off"):
+		return []output.Finding{fail("network.firewall-stealth", output.SeverityLow, "Firewall stealth mode is off",
+			"The Mac answers probes such as ping and port scans, which makes it easier to find on a shared network.",
+			"Turn on in System Settings > Network > Firewall > Options > Enable stealth mode.")}
+	case strings.Contains(out, "enabled"), strings.Contains(out, "is on"):
+		return []output.Finding{pass("network.firewall-stealth", "Firewall stealth mode is on")}
+	}
+	return []output.Finding{info("network.firewall-stealth", "Stealth mode state not recognised", firstLine(r.Stdout))}
 }
 
 var plistName = regexp.MustCompile(`\s(\S+\.plist)\s*$`)

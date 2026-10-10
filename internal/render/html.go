@@ -41,6 +41,7 @@ type view struct {
 	Checks     []output.CheckResult
 	Counts     []count
 	Started    string
+	Posture    *output.Posture
 }
 
 type count struct {
@@ -58,7 +59,7 @@ var order = []struct {
 }
 
 func newView(rep output.Report) view {
-	v := view{Rep: rep, Started: rep.StartedAt.UTC().Format("2006-01-02 15:04 UTC")}
+	v := view{Rep: rep, Posture: rep.Posture, Started: rep.StartedAt.UTC().Format("2006-01-02 15:04 UTC")}
 	bySev := map[output.Severity][]findingView{}
 	var errs, infos []findingView
 	for _, f := range rep.Findings {
@@ -107,6 +108,15 @@ var funcs = template.FuncMap{
 	"lines": func(s string) []string { return strings.Split(strings.TrimRight(s, "\n"), "\n") },
 	"attack": func(id string) string {
 		return "https://attack.mitre.org/techniques/" + strings.ReplaceAll(id, ".", "/") + "/"
+	},
+	"postureClass": func(status string) string {
+		switch status {
+		case "pass":
+			return "ok"
+		case "fail":
+			return "failed"
+		}
+		return "skipped"
 	},
 	"ms": func(n int64) string { return fmt.Sprintf("%.1fs", float64(n)/1000) },
 	"status": func(c output.CheckResult) string {
@@ -168,6 +178,15 @@ footer{margin-top:40px;color:var(--muted);font-size:.8rem}
 <div class="cards">
 {{range .Counts}}<div class="card {{.Class}}"><b>{{.N}}</b><span>{{.Label}}</span></div>
 {{end}}</div>
+
+{{with .Posture}}{{if or .Passed .Failed}}<h2>Hardening posture</h2>
+<p><b>{{.Score}}/100</b> &middot; {{.Passed}} pass, {{.Failed}} fail{{if .Accepted}}, {{.Accepted}} accepted{{end}}{{if .NotAssessed}}, {{.NotAssessed}} not assessed{{end}}</p>
+<table>
+<tr><th>Control</th><th>Result</th><th>mSCP rule</th></tr>
+{{range .Controls}}<tr><td>{{.Title}}{{if .Remediation}}{{if eq .Status "fail"}}<div class="small">Fix: {{.Remediation}}</div>{{end}}{{end}}</td><td class="{{postureClass .Status}}">{{.Status}}</td><td>{{with .MSCP}}<code>{{.}}</code>{{end}}</td></tr>
+{{end}}</table>
+<p class="small">Controls follow the macOS Security Compliance Project, the source of the CIS and NIST macOS benchmarks. The score covers the subset mac-compass can read and is a guide, not a compliance result.</p>
+{{end}}{{end}}
 
 <h2>Findings</h2>
 {{if not .Groups}}<p>No findings.</p>{{end}}

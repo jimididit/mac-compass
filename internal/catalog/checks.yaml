@@ -205,6 +205,14 @@ checks:
     args: [--getglobalstate]
     sudo: true
     attack: [T1562.004]
+  - id: network.firewall-stealth
+    section: network
+    name: Firewall stealth mode
+    description: Whether the firewall hides the Mac from probes such as ping and port scans
+    command: /usr/libexec/ApplicationFirewall/socketfilterfw
+    args: [--getstealthmode]
+    sudo: true
+    attack: [T1562.004]
   - id: network.dns
     section: network
     name: DNS config

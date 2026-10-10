@@ -30,6 +30,7 @@ var evaluators = map[string]evaluator{
 	"security-tools.filevault":      evalFileVault,
 	"harden.softwareupdate-list":    evalSoftwareUpdate,
 	"harden.auto-update-settings":   evalAutoUpdate,
+	"network.firewall-stealth":      evalStealth,
 }
 
 // HasEvaluator reports whether a check id has a findings evaluator.

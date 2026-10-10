@@ -71,9 +71,10 @@ you have reviewed.
 
 ## Hardening posture
 
-`mac-compass posture` runs every check and scores the result against 13 hardening controls: System Integrity
-Protection, signed system volume, Gatekeeper, FileVault, the firewall, guest account, automatic login, automatic
-security updates, pending updates, NVRAM boot-args, DYLD variables, login hooks and remotely reachable services.
+`mac-compass posture` runs every check and scores the result against 16 hardening controls: System Integrity
+Protection, signed system volume, Gatekeeper, FileVault, the firewall and its stealth mode, guest account, automatic
+login, automatic updates, pending updates, NVRAM boot-args, DYLD variables, login hooks, sudoers drop-ins, non-Apple
+kernel extensions and remotely reachable services.
 
 ```
 [PASS] System Integrity Protection is on
