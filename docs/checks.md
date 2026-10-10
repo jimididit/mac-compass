@@ -73,6 +73,7 @@ Listeners, connections, firewall, DNS and proxies.
 | `network.listening-tcp` | All listening TCP ports | yes | ✓ | ✓ |  |
 | `network.listening-udp` | UDP listeners | yes |  | ✓ |  |
 | `network.firewall` | Application firewall global state | yes | ✓ | ✓ | [T1562.004](https://attack.mitre.org/techniques/T1562/004/) |
+| `network.firewall-stealth` | Whether the firewall hides the Mac from probes such as ping and port scans | yes | ✓ |  | [T1562.004](https://attack.mitre.org/techniques/T1562/004/) |
 | `network.dns` | Current DNS configuration |  |  | ✓ |  |
 | `network.resolv-conf` | /etc/resolv.conf |  |  |  |  |
 | `network.proxy` | Configured HTTP/HTTPS/SOCKS/PAC proxies (a proxy can intercept traffic) |  | ✓ | ✓ |  |

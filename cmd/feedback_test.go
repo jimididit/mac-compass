@@ -94,3 +94,23 @@ func TestNoUsageOnRuntimeError(t *testing.T) {
 		t.Errorf("a missing argument should still show usage: %v\n%s", err, out)
 	}
 }
+
+func TestWritePosture(t *testing.T) {
+	var b strings.Builder
+	writePosture(&b, output.Report{})
+	if !strings.Contains(b.String(), "no score") {
+		t.Errorf("nothing assessed must not print a score:\n%s", b.String())
+	}
+
+	rep := output.Report{Posture: &output.Posture{Score: 60, Passed: 1, Failed: 1, Controls: []output.PostureControl{
+		{ID: "triage.sip", Title: "SIP is on", Status: "pass"},
+		{ID: "network.firewall", Title: "Firewall is on", Status: "fail", Remediation: "turn it on"},
+	}}}
+	b.Reset()
+	writePosture(&b, rep)
+	for _, want := range []string{"[PASS] SIP is on", "[FAIL] Firewall is on", "fix: turn it on", "Score: 60/100"} {
+		if !strings.Contains(b.String(), want) {
+			t.Errorf("missing %q in:\n%s", want, b.String())
+		}
+	}
+}

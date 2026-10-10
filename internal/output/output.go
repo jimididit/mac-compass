@@ -128,7 +128,28 @@ type Report struct {
 	Sections      []SectionResult `json:"sections"`
 	Findings      []Finding       `json:"findings"`
 	Suppressed    []Suppressed    `json:"suppressed,omitempty"`
+	Posture       *Posture        `json:"posture,omitempty"`
 	Summary       Summary         `json:"summary"`
+}
+
+// Posture scores the Mac against a set of hardening controls. Only controls that could be assessed count.
+type Posture struct {
+	Score       int              `json:"score"` // 0-100, weighted share of assessed controls that pass
+	Passed      int              `json:"passed"`
+	Failed      int              `json:"failed"`
+	Accepted    int              `json:"accepted"`     // failing controls accepted in the suppressions file; not scored
+	NotAssessed int              `json:"not_assessed"` // check skipped, errored, or output not recognised
+	Controls    []PostureControl `json:"controls"`
+}
+
+// PostureControl is one hardening control and how this Mac fares against it.
+type PostureControl struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Status      string `json:"status"` // pass, fail, accepted, not-assessed
+	Weight      int    `json:"weight"`
+	MSCP        string `json:"mscp,omitempty"` // macOS Security Compliance Project rule id
+	Remediation string `json:"remediation,omitempty"`
 }
 
 // Summarize fills Summary from sections and findings.

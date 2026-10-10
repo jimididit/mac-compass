@@ -36,6 +36,28 @@ func sampleReport() output.Report {
 	return rep
 }
 
+func TestHTML_Posture(t *testing.T) {
+	rep := sampleReport()
+	b, err := HTML(rep)
+	if err != nil || strings.Contains(string(b), "Hardening posture") {
+		t.Fatalf("no posture in the report, so no posture section: %v", err)
+	}
+	rep.Posture = &output.Posture{Score: 60, Passed: 1, Failed: 1, NotAssessed: 1, Controls: []output.PostureControl{
+		{ID: "triage.sip", Title: "SIP is on", Status: "pass", MSCP: "os_sip_enable"},
+		{ID: "network.firewall", Title: "Firewall is on", Status: "fail", Remediation: "turn it on"},
+		{ID: "triage.gatekeeper", Title: "Gatekeeper is on", Status: "not-assessed"},
+	}}
+	b, err = HTML(rep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Hardening posture", "60/100", "SIP is on", "os_sip_enable", "Fix: turn it on", "1 not assessed"} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("HTML missing %q", want)
+		}
+	}
+}
+
 func TestHTML_Content(t *testing.T) {
 	b, err := HTML(sampleReport())
 	if err != nil {
