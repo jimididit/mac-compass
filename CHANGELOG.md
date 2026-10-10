@@ -4,9 +4,18 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-10
+
 ### Added
 - `mac-compass posture` scores the Mac against 16 hardening controls that follow the macOS Security Compliance
-  Project, with each control's mSCP rule id. The score is also in the JSON report and on the last line of other runs.
+  Project, with each control's mSCP rule id. The score is also in the JSON report, in the HTML report, and on the
+  last line of other runs.
+- New check `network.firewall-stealth` (49 checks): whether the firewall hides the Mac from probes such as ping and
+  port scans.
+
+### Changed
+- The automatic-update finding also covers the check-for-updates and download switches, not only security responses
+  and system data files.
 
 ## [0.4.1] - 2026-10-09
 
