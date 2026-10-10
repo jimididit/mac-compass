@@ -77,6 +77,7 @@ func TestExtractors_Synthetic(t *testing.T) {
 		res("persistence.login-items", "Dropbox, Slack\n"),
 		res("persistence.crontab", "# comment\n*/5 * * * * /tmp/x.sh\n"),
 		res("triage.kext-non-apple", "Index Refs Address Size Wired Name (Version) UUID <Linked Against>\n  120  0 0xffffff80 0x1000 0x1000 com.evil.kext (1.2.3) ABCD <5 3>\n"),
+		res("kernel.kext-loaded", "Index Refs Address Size Wired Name (Version) UUID <Linked Against>\n   1  0 0xffffff80 0x1000 0x1000 com.apple.filesystems.autofs (3.0) AAAA <5>\n 120  0 0xffffff80 0x1000 0x1000 com.evil.kext (1.2.3) ABCD <5 3>\n"),
 		res("kernel.system-extensions", "1 extension(s)\n--- com.apple.system_extension.endpoint_security\nenabled\tactive\tteamID\tbundleID (version)\tname\t[state]\n*\t*\tABCDE12345\tcom.vendor.es (1.0/1)\tES Agent\t[activated enabled]\n"),
 	)
 	check := func(id string, want ...string) {
@@ -91,6 +92,8 @@ func TestExtractors_Synthetic(t *testing.T) {
 	check("persistence.login-items", "Dropbox", "Slack")
 	check("persistence.crontab", "*/5 * * * * /tmp/x.sh")
 	check("triage.kext-non-apple", "com.evil.kext (1.2.3)")
+	// Apple's on-demand extensions come and go on an untouched Mac, so they are not part of the baseline.
+	check("kernel.kext-loaded", "com.evil.kext (1.2.3)")
 	if got := s.Checks["kernel.system-extensions"].Items; len(got) != 1 || !strings.Contains(got[0], "com.vendor.es") {
 		t.Errorf("sysext rows: %q", got)
 	}

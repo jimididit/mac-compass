@@ -100,14 +100,16 @@ func crontabLines(r output.CheckResult) []string {
 
 var kextRe = regexp.MustCompile(`\s(\S+) \(([^)]*)\)`)
 
-// kexts extracts "name (version)" from kmutil showloaded rows, skipping the header.
+// kexts extracts "name (version)" from kmutil showloaded rows, skipping the header. Apple's own extensions
+// are left out: macOS loads and unloads them on demand, so they come and go between two runs on an untouched
+// Mac, and the same "com.apple" rule is what the non-Apple kernel extension check applies.
 func kexts(r output.CheckResult) []string {
 	var out []string
 	for _, l := range nonEmptyLines(r.Stdout) {
 		if strings.HasPrefix(l, "Index") {
 			continue
 		}
-		if m := kextRe.FindStringSubmatch(l); m != nil {
+		if m := kextRe.FindStringSubmatch(l); m != nil && !strings.HasPrefix(m[1], "com.apple.") {
 			out = append(out, m[1]+" ("+m[2]+")")
 		}
 	}
