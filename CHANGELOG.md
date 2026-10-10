@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-10
+
 ### Changed
 - `posture` says why a control was not assessed when run with `--no-sudo`, lists checks that could not run, and the
   boot-args control is titled "No custom NVRAM boot-args" to match what it flags.
