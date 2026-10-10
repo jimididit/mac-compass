@@ -358,6 +358,20 @@ func writePosture(w io.Writer, rep output.Report) {
 		if c.Status == posture.StatusFail && c.Remediation != "" {
 			fmt.Fprintf(w, "    fix: %s\n", c.Remediation)
 		}
+		if c.Status == posture.StatusNotAssessed && !rep.SudoEnabled {
+			fmt.Fprintln(w, "    not assessed: this check needs sudo")
+		}
+	}
+	for _, f := range rep.Findings {
+		if f.Status == output.StatusError {
+			fmt.Fprintf(w, "\nCould not run: %s\n", f.Title)
+			if f.Detail != "" {
+				fmt.Fprintf(w, "    %s\n", f.Detail)
+			}
+			if f.Remediation != "" {
+				fmt.Fprintf(w, "    fix: %s\n", f.Remediation)
+			}
+		}
 	}
 	fmt.Fprintf(w, "\nScore: %d/100 (%d pass, %d fail, %d accepted, %d not assessed)\n", p.Score, p.Passed, p.Failed, p.Accepted, p.NotAssessed)
 	fmt.Fprintln(w, "Controls follow the macOS Security Compliance Project (mSCP), the source of the CIS and NIST macOS benchmarks.")
