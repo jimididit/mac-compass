@@ -32,7 +32,7 @@ var Controls = []Control{
 	{"accounts.autologin", "Automatic login is off", 2, "system_settings_automatic_login_disable", "System Settings > Users & Groups"},
 	{"harden.auto-update-settings", "Automatic software updates are on", 2, "system_settings_critical_update_install_enforce", "System Settings > General > Software Update > Automatic Updates"},
 	{"harden.softwareupdate-list", "macOS is up to date", 1, "", "System Settings > General > Software Update"},
-	{"kernel.nvram-boot-args", "No weakening NVRAM boot-args", 2, "", "Run: sudo nvram -d boot-args"},
+	{"kernel.nvram-boot-args", "No custom NVRAM boot-args", 2, "", "Run: sudo nvram -d boot-args"},
 	{"processes.launchctl-dyld", "No DYLD variables in the launchd domain", 2, "", ""},
 	{"persistence.login-hooks", "No login or logout hooks", 2, "", ""},
 	{"persistence.sudoers-d", "No custom sudoers drop-ins", 1, "", "Review /etc/sudoers.d; a NOPASSWD rule grants root without a password"},

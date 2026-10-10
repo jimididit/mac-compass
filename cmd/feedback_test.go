@@ -102,13 +102,16 @@ func TestWritePosture(t *testing.T) {
 		t.Errorf("nothing assessed must not print a score:\n%s", b.String())
 	}
 
-	rep := output.Report{Posture: &output.Posture{Score: 60, Passed: 1, Failed: 1, Controls: []output.PostureControl{
-		{ID: "triage.sip", Title: "SIP is on", Status: "pass"},
-		{ID: "network.firewall", Title: "Firewall is on", Status: "fail", Remediation: "turn it on"},
-	}}}
+	rep := output.Report{
+		Findings: []output.Finding{{Status: output.StatusError, Title: `Check "Kernel extensions" could not run`, Detail: "exit status 1"}},
+		Posture: &output.Posture{Score: 60, Passed: 1, Failed: 1, Controls: []output.PostureControl{
+			{ID: "triage.sip", Title: "SIP is on", Status: "pass"},
+			{ID: "network.firewall", Title: "Firewall is on", Status: "fail", Remediation: "turn it on"},
+			{ID: "security-tools.filevault", Title: "FileVault is on", Status: "not-assessed"},
+		}}}
 	b.Reset()
 	writePosture(&b, rep)
-	for _, want := range []string{"[PASS] SIP is on", "[FAIL] Firewall is on", "fix: turn it on", "Score: 60/100"} {
+	for _, want := range []string{"[PASS] SIP is on", "[FAIL] Firewall is on", "fix: turn it on", "Score: 60/100", "this check needs sudo", "Could not run: Check"} {
 		if !strings.Contains(b.String(), want) {
 			t.Errorf("missing %q in:\n%s", want, b.String())
 		}
