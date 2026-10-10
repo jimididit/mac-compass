@@ -8,6 +8,7 @@
 | `mac-compass triage` | Quick triage: SIP, Gatekeeper, kernel extensions, launch items. Run this first |
 | `mac-compass run-all` | Every section; asks for confirmation unless `-y` |
 | `mac-compass processes` · `kernel` · `persistence` · `network` · `security-tools` · `advanced` · `harden` · `accounts` | One section at a time |
+| `mac-compass posture` | Score the Mac against hardening controls ([details](#hardening-posture)) |
 | `mac-compass snapshot` | Record a baseline ([details](baseline.md)) |
 | `mac-compass compare BASELINE [CURRENT]` | Show what changed since a baseline ([details](baseline.md)) |
 | `mac-compass monitor install` / `status` / `run` / `uninstall` | Watch for changes on a schedule ([details](#monitor-mode)) |
@@ -63,9 +64,35 @@ you have reviewed.
   "findings": [ { "id": "triage.sip", "status": "fail", "severity": "high", "title": "…",
                   "remediation": "…", "attack": ["T1562.001"] } ],
   "suppressed": [ /* findings you accepted, with your reason */ ],
+  "posture":  { "score": 77, "passed": 8, "failed": 2, "controls": [ { "id": "triage.sip", "status": "pass", "mscp": "os_sip_enable" } ] },
   "summary":  { "pass": 12, "fail": 6, "info": 2, "error": 0, "highest_severity": "high" }
 }
 ```
+
+## Hardening posture
+
+`mac-compass posture` runs every check and scores the result against 13 hardening controls: System Integrity
+Protection, signed system volume, Gatekeeper, FileVault, the firewall, guest account, automatic login, automatic
+security updates, pending updates, NVRAM boot-args, DYLD variables, login hooks and remotely reachable services.
+
+```
+[PASS] System Integrity Protection is on
+[FAIL] FileVault disk encryption is on
+    fix: System Settings > Privacy & Security > FileVault
+
+Score: 77/100 (8 pass, 2 fail, 0 accepted, 3 not assessed)
+```
+
+- The controls follow the [macOS Security Compliance Project](https://github.com/usnistgov/macos_security) (mSCP),
+  the open source from which the CIS and NIST macOS benchmarks are generated. `--json` lists each control's mSCP
+  rule id so you can look up the benchmark text.
+- Each control carries a weight from 1 to 3; the score is the weighted share of **assessed** controls that pass.
+  A control whose check was skipped, could not run or gave output mac-compass does not recognise is "not assessed"
+  and does not count against you. With no assessed control there is no score.
+- A failing control you accepted in a [suppressions file](baseline.md#accepting-reviewed-findings) shows as
+  "accepted" and is left out of the score.
+- The score covers only what mac-compass can read without changing anything. It is a guide to where to look first,
+  not a CIS or NIST compliance result. Every other run also prints the score on its last line.
 
 ## Report formats
 

@@ -4,6 +4,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+- `mac-compass posture` scores the Mac against 13 hardening controls that follow the macOS Security Compliance
+  Project, with each control's mSCP rule id. The score is also in the JSON report and on the last line of other runs.
+
 ## [0.4.1] - 2026-10-09
 
 ### Added

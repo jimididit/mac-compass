@@ -13,6 +13,7 @@ import (
 	"github.com/jimididit/mac-compass/internal/catalog"
 	"github.com/jimididit/mac-compass/internal/findings"
 	"github.com/jimididit/mac-compass/internal/output"
+	"github.com/jimididit/mac-compass/internal/posture"
 	"github.com/jimididit/mac-compass/internal/redact"
 	"github.com/jimididit/mac-compass/internal/render"
 	"github.com/jimididit/mac-compass/internal/runner"
@@ -176,10 +177,10 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 			cmd.Printf("No checks for section %q in catalog.\n", id)
 			continue
 		}
-		if len(sectionIDs) > 1 && !jsonOutput {
+		if len(sectionIDs) > 1 && !jsonOutput && !postureView {
 			fmt.Fprintf(opts.OutWriter, "\n========== %s ==========\n", id)
 		}
-		sections = append(sections, output.SectionResult{Section: id, Checks: executeSection(ctx, id, checks, opts, !jsonOutput)})
+		sections = append(sections, output.SectionResult{Section: id, Checks: executeSection(ctx, id, checks, opts, !jsonOutput && !postureView)})
 	}
 
 	rep := buildReport(sections, sys, started)
@@ -187,6 +188,9 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 		return err
 	}
 	rep.Summarize()
+	if p := posture.Assess(rep.Findings, rep.Suppressed); p.Passed+p.Failed+p.Accepted > 0 {
+		rep.Posture = &p
+	}
 	red.Report(&rep)
 	if err := writeExtraReports(rep); err != nil {
 		return err
@@ -196,6 +200,8 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 		if err := output.WriteJSON(cmd.OutOrStdout(), rep); err != nil {
 			return err
 		}
+	} else if postureView {
+		writePosture(opts.OutWriter, rep)
 	} else {
 		writeFindings(opts.OutWriter, rep)
 	}
@@ -329,6 +335,33 @@ func writeFindings(w io.Writer, rep output.Report) {
 	}
 	fmt.Fprintf(w, "\n%s, %d passed, %d info, %d errors; checks: %d ok, %d skipped, %d failed\n",
 		failed, s.Pass, s.Info, s.Error, s.ChecksOK, s.ChecksSkipped, s.ChecksFailed)
+	if p := rep.Posture; p != nil && p.Passed+p.Failed > 0 {
+		fmt.Fprintf(w, "Hardening posture: %d/100 (run 'mac-compass posture' for the control list)\n", p.Score)
+	}
+}
+
+// postureMarks are the status tags in the posture list.
+var postureMarks = map[string]string{
+	posture.StatusPass: "PASS", posture.StatusFail: "FAIL", posture.StatusAccepted: "ACCEPTED", posture.StatusNotAssessed: "N/A",
+}
+
+// writePosture prints the hardening controls and the score.
+func writePosture(w io.Writer, rep output.Report) {
+	p := rep.Posture
+	if p == nil || p.Passed+p.Failed == 0 {
+		fmt.Fprintln(w, "No hardening control could be assessed, so there is no score. Run again without --no-sudo.")
+		return
+	}
+	fmt.Fprint(w, "\n========== Hardening posture ==========\n")
+	for _, c := range p.Controls {
+		fmt.Fprintf(w, "[%s] %s\n", postureMarks[c.Status], c.Title)
+		if c.Status == posture.StatusFail && c.Remediation != "" {
+			fmt.Fprintf(w, "    fix: %s\n", c.Remediation)
+		}
+	}
+	fmt.Fprintf(w, "\nScore: %d/100 (%d pass, %d fail, %d accepted, %d not assessed)\n", p.Score, p.Passed, p.Failed, p.Accepted, p.NotAssessed)
+	fmt.Fprintln(w, "Controls follow the macOS Security Compliance Project (mSCP), the source of the CIS and NIST macOS benchmarks.")
+	fmt.Fprintln(w, "The score covers the subset that mac-compass can read. It is a guide, not a compliance result.")
 }
 
 // hasTTY reports whether the process has a controlling terminal (so sudo can prompt for a password).
