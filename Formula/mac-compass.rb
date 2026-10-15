@@ -10,8 +10,8 @@
 class MacCompass < Formula
   desc "Triage, baseline and audit a Mac from the command line"
   homepage "https://github.com/jimididit/mac-compass"
-  url "https://github.com/jimididit/mac-compass/releases/download/v0.5.1/mac-compass_0.5.1_macos_universal.tar.gz"
-  sha256 "3819461513023945c8f03391265813831c64d9a2aab083493f2feca1ee23721d"
+  url "https://github.com/jimididit/mac-compass/releases/download/v0.5.2/mac-compass_0.5.2_macos_universal.tar.gz"
+  sha256 "76f6be3feb219aa819493409bdabebb7eb29a6bec87cbdff764cb51121a1edaf"
   license "MIT"
 
   depends_on :macos
