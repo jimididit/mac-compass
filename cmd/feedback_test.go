@@ -117,3 +117,17 @@ func TestWritePosture(t *testing.T) {
 		}
 	}
 }
+
+// collect used to leave the posture out of the bundle's report.
+func TestAddPosture(t *testing.T) {
+	rep := output.Report{Findings: []output.Finding{{CheckID: "triage.sip", Status: output.StatusPass}}}
+	addPosture(&rep)
+	if rep.Posture == nil || rep.Posture.Passed != 1 {
+		t.Errorf("posture should be scored: %+v", rep.Posture)
+	}
+	empty := output.Report{}
+	addPosture(&empty)
+	if empty.Posture != nil {
+		t.Errorf("nothing assessed means no posture: %+v", empty.Posture)
+	}
+}

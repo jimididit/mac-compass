@@ -96,6 +96,9 @@ func processLocation(p runningProgram) string {
 	return "hidden location"
 }
 
+// appStoreSigner is the signing authority of apps distributed through the Mac App Store.
+const appStoreSigner = "Apple Mac OS Application Signing"
+
 func processBucket(p runningProgram) string {
 	switch {
 	case p.State == "apple":
@@ -106,6 +109,8 @@ func processBucket(p runningProgram) string {
 		return "Developer ID, notarization unknown"
 	case p.State == "developer-id":
 		return "Developer ID, not notarized"
+	case p.State == "other-signed" && p.Signer == appStoreSigner:
+		return "Mac App Store"
 	case p.State == "other-signed":
 		return "other signature"
 	}
@@ -114,7 +119,7 @@ func processBucket(p runningProgram) string {
 
 func processSummary(counts map[string]int) string {
 	var parts []string
-	for _, k := range []string{"Apple", "Developer ID, notarized", "Developer ID, not notarized", "Developer ID, notarization unknown", "other signature", "adhoc", "unsigned", "missing", "unreadable"} {
+	for _, k := range []string{"Apple", "Developer ID, notarized", "Developer ID, not notarized", "Developer ID, notarization unknown", "Mac App Store", "other signature", "adhoc", "unsigned", "missing", "unreadable"} {
 		if n := counts[k]; n > 0 {
 			parts = append(parts, fmt.Sprintf("%d %s", n, k))
 		}

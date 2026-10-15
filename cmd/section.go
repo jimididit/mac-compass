@@ -188,9 +188,7 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 		return err
 	}
 	rep.Summarize()
-	if p := posture.Assess(rep.Findings, rep.Suppressed); p.Passed+p.Failed+p.Accepted > 0 {
-		rep.Posture = &p
-	}
+	addPosture(&rep)
 	red.Report(&rep)
 	if err := writeExtraReports(rep); err != nil {
 		return err
@@ -206,6 +204,13 @@ func runSections(cmd *cobra.Command, sectionIDs []string) error {
 		writeFindings(opts.OutWriter, rep)
 	}
 	return exitError(cmd, rep, threshold)
+}
+
+// addPosture scores the report against the hardening controls, when at least one could be assessed.
+func addPosture(rep *output.Report) {
+	if p := posture.Assess(rep.Findings, rep.Suppressed); p.Passed+p.Failed+p.Accepted > 0 {
+		rep.Posture = &p
+	}
 }
 
 // writeExtraReports writes the --html and --sarif outputs, if requested. Reports hold host details,

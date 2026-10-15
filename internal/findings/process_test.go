@@ -62,3 +62,16 @@ func TestProcessSignatures_Empty(t *testing.T) {
 		t.Errorf("%+v", f)
 	}
 }
+
+// Mac App Store apps are signed by "Apple Mac OS Application Signing", not by a Developer ID; they are
+// not an unknown signer, so they get their own bucket.
+func TestProcessSignatures_AppStoreApps(t *testing.T) {
+	data := procRows(
+		"me\t/Applications/WireGuard.app/Contents/MacOS/WireGuard\t1\tother-signed\tL82V4Y2P3C\tApple Mac OS Application Signing\t-\t-",
+		"me\t/Applications/Odd.app/Contents/MacOS/Odd\t1\tother-signed\tZZZZZ11111\tSome Other Authority\t-\t-",
+	)
+	f := one(t, eval(t, res("processes.signatures", data)))
+	if !strings.Contains(f.Detail, "1 Mac App Store") || !strings.Contains(f.Detail, "1 other signature") {
+		t.Errorf("App Store apps need their own bucket: %+v", f)
+	}
+}

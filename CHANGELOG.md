@@ -4,6 +4,11 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Fixed
+- `collect` evidence bundles now include the hardening posture in `report.json` and `report.html`; they were left out.
+- Mac App Store apps (signed by "Apple Mac OS Application Signing") are counted as "Mac App Store" in the running
+  program and launch item summaries instead of "other signature".
+
 ## [0.5.1] - 2026-10-10
 
 ### Changed
