@@ -59,6 +59,7 @@ var collectCmd = &cobra.Command{
 			return err
 		}
 		rep.Summarize()
+		addPosture(&rep)
 		snap := baseline.FromSections(rep.Tool, rep.Host, !noSudo, started, sections)
 
 		var findingsText bytes.Buffer

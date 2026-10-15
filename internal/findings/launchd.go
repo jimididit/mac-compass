@@ -108,6 +108,8 @@ func summaryBucket(it launchItem) string {
 		return "Developer ID, notarization unknown"
 	case it.State == "developer-id":
 		return "Developer ID, not notarized"
+	case it.State == "other-signed" && it.Signer == appStoreSigner:
+		return "Mac App Store"
 	case it.State == "other-signed":
 		return "other signature"
 	}
@@ -116,7 +118,7 @@ func summaryBucket(it launchItem) string {
 
 func summaryLine(counts map[string]int) string {
 	var parts []string
-	for _, k := range []string{"Apple", "Developer ID, notarized", "Developer ID, not notarized", "Developer ID, notarization unknown", "other signature", "adhoc", "unsigned", "script", "missing", "unreadable", "no-program", "mac-compass monitor job"} {
+	for _, k := range []string{"Apple", "Developer ID, notarized", "Developer ID, not notarized", "Developer ID, notarization unknown", "Mac App Store", "other signature", "adhoc", "unsigned", "script", "missing", "unreadable", "no-program", "mac-compass monitor job"} {
 		if n := counts[k]; n > 0 {
 			parts = append(parts, fmt.Sprintf("%d %s", n, k))
 		}
