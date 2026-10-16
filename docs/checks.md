@@ -59,6 +59,7 @@ Ways code survives a reboot or login: launchd, login items, cron, shell startup,
 | `persistence.periodic-daily` | /etc/periodic/daily/ (absent on newer macOS, e.g. 26; absence is normal) |  |  |  |  |
 | `persistence.btm` | Login items and background items registered with the system (raw dump) | yes | ✓ | ✓ | [T1547.015](https://attack.mitre.org/techniques/T1547/015/), [T1543.001](https://attack.mitre.org/techniques/T1543/001/), [T1543.004](https://attack.mitre.org/techniques/T1543/004/) |
 | `persistence.launchd-targets` | Program each launch item runs, with its code-signing and notarization state |  | ✓ | ✓ | [T1543.001](https://attack.mitre.org/techniques/T1543/001/), [T1543.004](https://attack.mitre.org/techniques/T1543/004/) |
+| `persistence.launch-integrity` | **Deep mode only.** SHA-256 of each launch item's plist and program, and whether the program's code signature still verifies |  | ✓ | ✓ | [T1543.001](https://attack.mitre.org/techniques/T1543/001/), [T1543.004](https://attack.mitre.org/techniques/T1543/004/), [T1554](https://attack.mitre.org/techniques/T1554/) |
 | `persistence.shell-rc` | SHA-256 of shell startup files (changes here run code at every shell) |  |  | ✓ | [T1546.004](https://attack.mitre.org/techniques/T1546/004/) |
 | `persistence.login-hooks` | Deprecated loginwindow hooks that run a script as root at login or logout |  | ✓ | ✓ | [T1037.002](https://attack.mitre.org/techniques/T1037/002/) |
 | `persistence.hosts` | Non-comment lines in /etc/hosts (used to redirect domains) |  | ✓ | ✓ |  |

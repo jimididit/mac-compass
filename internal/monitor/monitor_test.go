@@ -334,3 +334,26 @@ func TestQuote(t *testing.T) {
 		t.Errorf("Quote = %s", got)
 	}
 }
+
+// Turning --deep on after the baseline was taken must not look like deep coverage: say that the baseline
+// does not include the deep checks yet.
+func TestMonitorSaysWhenBaselineLacksNewChecks(t *testing.T) {
+	f := newFixture(t)
+	if _, err := Run(context.Background(), f.opts()); err != nil { // baseline without the deep check
+		t.Fatal(err)
+	}
+	deep := snap("System Integrity Protection status: enabled.")
+	deep.Checks["persistence.launch-integrity"] = baseline.Entry{Kind: baseline.KindKeyed, Items: []string{"/x.plist => plist=a"}}
+	f.snapshot = deep
+	res, err := Run(context.Background(), f.opts())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(res.State.LastError, "persistence.launch-integrity") || !strings.Contains(res.State.LastError, "--rebaseline") {
+		t.Errorf("expected a note about the uncovered check, got %q", res.State.LastError)
+	}
+	f.snapshot = snap("System Integrity Protection status: enabled.")
+	if res, _ := Run(context.Background(), f.opts()); res.State.LastError != "" {
+		t.Errorf("no note once nothing is uncovered, got %q", res.State.LastError)
+	}
+}

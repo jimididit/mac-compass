@@ -24,6 +24,7 @@ type deps struct {
 	listDir  func(dir string) ([]string, error) // file names in dir
 	exists   func(path string) bool
 	readHead func(path string, n int) ([]byte, error) // first n bytes of a file
+	hashFile func(path string) (string, error)        // hex SHA-256 of a file
 	home     string                                   // the invoking user's home directory
 }
 
@@ -33,6 +34,7 @@ type builtinFn func(ctx context.Context, d deps) (string, error)
 var builtins = map[string]builtinFn{
 	"launchd-targets":    launchdTargets,
 	"process-signatures": processSignatures,
+	"launch-integrity":   launchIntegrity,
 }
 
 // runBuiltin runs an in-process collector with the same timeout and result shape as a command.
@@ -46,7 +48,7 @@ func runBuiltin(ctx context.Context, ch catalog.Check, opts Options, out io.Writ
 	defer cancel()
 	home, _ := InvokingUserHome()
 	start := time.Now()
-	stdout, err := fn(runCtx, deps{exec: realExec, listDir: listDir, exists: pathExists, readHead: readHead, home: home})
+	stdout, err := fn(runCtx, deps{exec: realExec, listDir: listDir, exists: pathExists, readHead: readHead, hashFile: sha256File, home: home})
 	res := Result{Stdout: stdout, Duration: time.Since(start)}
 	if out != nil {
 		io.WriteString(out, stdout)

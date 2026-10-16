@@ -9,7 +9,7 @@ import (
 )
 
 // monitorLabel is the launchd label of mac-compass monitor's own job; a test keeps it equal to monitor.Label.
-const monitorLabel = "io.github.jimididit.mac-compass.monitor"
+const monitorLabel = runner.MonitorLabel
 
 func init() { evaluators["persistence.launchd-targets"] = evalLaunchdTargets }
 

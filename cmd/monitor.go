@@ -217,6 +217,9 @@ var monitorInstallCmd = &cobra.Command{
 		if vmMode {
 			extra = append(extra, "--vm")
 		}
+		if deepMode {
+			extra = append(extra, "--deep")
+		}
 		if suppressFile != "" {
 			abs, err := filepath.Abs(suppressFile)
 			if err != nil {

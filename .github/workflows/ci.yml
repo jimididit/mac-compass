@@ -82,6 +82,33 @@ jobs:
           sudo chown "$(id -un)" out/snap-a.json out/snap-b.json
           # The planted LaunchAgent must be reported as new; this proves snapshot+compare end to end.
           jq -e '.findings[] | select(.id=="persistence.launchagents-user" and .status=="fail" and (.detail|contains("com.example.compass-ci-test.plist")))' out/compare-planted.json
+      - name: deep mode (launch item hashes, signature verification, tampering is classified)
+        run: |
+          set -e
+          # The deep check runs and its findings are shown (a failing signature on a runner image is data to look at).
+          sudo ./mac-compass persistence --deep --vm --json > out/deep.json || true
+          jq -e '.sections[].checks[] | select(.id=="persistence.launch-integrity") | .ok' out/deep.json
+          jq -r '.findings[] | select(.id=="persistence.launch-integrity") | "\(.status) \(.severity // "") \(.title)"' out/deep.json | tee out/deep-findings.txt
+          # A launch item whose script changes between two snapshots must be classified, not just listed.
+          mkdir -p "$HOME/Library/LaunchAgents" "$HOME/bin"
+          printf '#!/bin/sh\necho one\n' > "$HOME/bin/compass-deep-test.sh"; chmod +x "$HOME/bin/compass-deep-test.sh"
+          cat > "$HOME/Library/LaunchAgents/com.example.compass-deep-test.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict><key>Label</key><string>com.example.compass-deep-test</string>
+          <key>ProgramArguments</key><array><string>$HOME/bin/compass-deep-test.sh</string></array></dict></plist>
+          PLIST
+          sudo ./mac-compass snapshot --deep --vm -o out/deep-a.json
+          echo 'echo two' >> "$HOME/bin/compass-deep-test.sh"
+          sudo ./mac-compass snapshot --deep --vm -o out/deep-b.json
+          rm -f "$HOME/Library/LaunchAgents/com.example.compass-deep-test.plist" "$HOME/bin/compass-deep-test.sh"
+          sudo chown "$(id -un)" out/deep-a.json out/deep-b.json
+          jq -e '.checks["persistence.launch-integrity"].items | length > 0' out/deep-a.json
+          ./mac-compass compare out/deep-a.json out/deep-b.json --json > out/deep-compare.json || true
+          jq -e '.findings[] | select(.id=="persistence.launch-integrity" and .status=="fail" and .severity=="medium" and (.detail | contains("compass-deep-test")))' out/deep-compare.json
+          # The same snapshot against itself shows nothing for this check.
+          ./mac-compass compare out/deep-a.json out/deep-a.json --json > out/deep-same.json || true
+          ! jq -e '.findings[] | select(.id=="persistence.launch-integrity")' out/deep-same.json
       - name: evidence bundle (collect, verify, tamper)
         run: |
           set -e

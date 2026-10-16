@@ -349,3 +349,66 @@ func TestProcessSignatures_PsFailure(t *testing.T) {
 		t.Error("a failing ps must be an error, not an empty success")
 	}
 }
+
+func TestLaunchIntegrity(t *testing.T) {
+	f := &fakeSystem{
+		calls: map[string]int{},
+		dirs:  map[string][]string{"/Library/LaunchDaemons": {"com.good.plist", "com.tampered.plist", "com.script.plist", "com.gone.plist"}},
+		plists: map[string]string{
+			"/Library/LaunchDaemons/com.good.plist":     `{"Label":"com.good","ProgramArguments":["/Library/Foo/foo"]}`,
+			"/Library/LaunchDaemons/com.tampered.plist": `{"Label":"com.tampered","ProgramArguments":["/Library/Bar/bar"]}`,
+			"/Library/LaunchDaemons/com.script.plist":   `{"Label":"com.script","Program":"/usr/local/bin/run.sh"}`,
+			"/Library/LaunchDaemons/com.gone.plist":     `{"Label":"com.gone","ProgramArguments":["/opt/removed/app"]}`,
+		},
+		scripts: map[string]bool{"/usr/local/bin/run.sh": true},
+		exists:  map[string]bool{"/Library/Foo/foo": true, "/Library/Bar/bar": true, "/usr/local/bin/run.sh": true},
+		sign: map[string][2]string{
+			"/Library/Foo/foo": {devIDCodesign, "notarized"},
+			"/Library/Bar/bar": {devIDCodesign, "notarized"},
+		},
+	}
+	d := f.deps("/Users/me")
+	base := d.exec
+	broken := map[string]bool{"/Library/Bar/bar": true}
+	d.exec = func(ctx context.Context, argv ...string) (string, string, int, error) {
+		// A plain `codesign --verify -- target` checks the signature; the notarization check has --test-requirement.
+		if argv[0] == "/usr/bin/codesign" && len(argv) == 4 && argv[1] == "--verify" {
+			if broken[argv[3]] {
+				return "", argv[3] + ": a sealed resource is missing or invalid", 1, nil
+			}
+			return "", "", 0, nil
+		}
+		return base(ctx, argv...)
+	}
+	d.hashFile = func(p string) (string, error) { return "sha:" + p, nil }
+
+	out, err := launchIntegrity(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := strings.Split(strings.TrimSpace(out), "\n")
+	if rows[0] != IntegrityHeader {
+		t.Fatalf("header = %q", rows[0])
+	}
+	by := map[string][]string{}
+	for _, r := range rows[1:] {
+		c := strings.Split(r, "\t")
+		if len(c) != 10 {
+			t.Fatalf("row has %d columns: %q", len(c), r)
+		}
+		by[c[1]] = c
+	}
+	// columns: kind label plist plist_sha256 target target_sha256 state signature team signer
+	if g := by["com.good"]; g[3] != "sha:/Library/LaunchDaemons/com.good.plist" || g[5] != "sha:/Library/Foo/foo" || g[7] != "valid" {
+		t.Errorf("good item: %v", g)
+	}
+	if by["com.tampered"][7] != "invalid" {
+		t.Errorf("a program whose signature fails must be invalid: %v", by["com.tampered"])
+	}
+	if s := by["com.script"]; s[6] != "script" || s[7] != "-" || s[5] != "sha:/usr/local/bin/run.sh" {
+		t.Errorf("a script has no signature but is still hashed: %v", s)
+	}
+	if g := by["com.gone"]; g[6] != "missing" || g[5] != "-" || g[7] != "-" {
+		t.Errorf("a missing program has nothing to hash or verify: %v", g)
+	}
+}

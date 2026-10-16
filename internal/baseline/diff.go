@@ -96,9 +96,12 @@ func Compare(old, cur Snapshot) Result {
 		if !ok {
 			m = meta{label: id, addedSev: output.SeverityMedium}
 		}
-		if c.Kind == KindState {
+		switch c.Kind {
+		case KindState:
 			res.Findings = append(res.Findings, diffState(id, m, o, c)...)
-		} else {
+		case KindKeyed:
+			res.Findings = append(res.Findings, diffKeyed(id, m, o, c)...)
+		default:
 			res.Findings = append(res.Findings, diffSet(id, m, o, c)...)
 		}
 	}

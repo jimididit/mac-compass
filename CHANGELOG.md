@@ -4,6 +4,13 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+- `--deep` mode with a new check, `persistence.launch-integrity` (50 checks): SHA-256 of every launch item's plist
+  and program plus a signature verification. Baselines and `monitor` classify a change instead of just listing it:
+  a signed update is informational, a signature that stops verifying or a changed signer is high, and a changed plist
+  or unverifiable program is medium. `monitor install --deep` schedules the monitor with it.
+- The monitor notes when its baseline predates a check that is now running, and how to include it.
+
 ## [0.5.2] - 2026-10-15
 
 ### Fixed
