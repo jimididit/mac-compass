@@ -182,6 +182,22 @@ mac-compass compare before.json --deep
 mac-compass monitor install --deep
 ```
 
+**Installed applications** (`advanced.applications`) lists the apps in `/Applications` and `~/Applications` (one folder
+level down, so `Utilities` is included) with each bundle's identifier, version, signer and code-directory hash.
+Apple's own apps on the sealed system volume are not listed. A baseline then tells you what changed:
+
+| What changed since the baseline | Reported as |
+|---|---|
+| A new application | low (add `--notify-on low` to the monitor to be alerted for every one) |
+| A new version from the same signer | info: "updated 1.0 -> 1.1" |
+| Same version, different contents | medium: "contents changed without a version change" |
+| Different signer, bundle identifier or signing state | **high** |
+| An application removed | info |
+
+A single deep run also lists installed apps that have no code signature (low). This check does not verify each
+bundle's signature, which would read every file of every app; the code-directory hash catches a re-signed or
+rebuilt copy without that cost.
+
 The monitor's own launch item is left out, because reinstalling or updating mac-compass changes it. A baseline taken
 without `--deep` does not contain the deep checks; the monitor says so, and `monitor run --rebaseline` adds them.
 Deep checks hash every launch item program, so a run takes a few seconds longer.

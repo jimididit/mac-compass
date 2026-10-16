@@ -3,7 +3,6 @@ package baseline
 import (
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/jimididit/mac-compass/internal/output"
@@ -15,6 +14,7 @@ const integrityID = "persistence.launch-integrity"
 func init() {
 	extractors[integrityID] = extractor{KindKeyed, integrityItems}
 	metas[integrityID] = meta{"Launch item", output.SeverityMedium, "Compare the plist and program with a known-good copy; reinstall the software that owns the item"}
+	keyedSpecs[integrityID] = keyedSpec{classify: classifyIntegrityValues}
 }
 
 // keySep separates an item's identity from its recorded state in a keyed entry.
@@ -84,58 +84,13 @@ func classifyIntegrity(o, n integrityState) (sev output.Severity, reasons []stri
 	return sev, reasons
 }
 
-// diffKeyed compares keyed entries: items present in only one snapshot are reported quietly (the launch item
-// checks already raise additions), and an item present in both is classified by what changed.
-func diffKeyed(id string, m meta, o, c Entry) []output.Finding {
-	split := func(items []string) map[string]string {
-		out := map[string]string{}
-		for _, it := range items {
-			if k, v, ok := strings.Cut(it, keySep); ok {
-				out[k] = v
-			}
-		}
-		return out
+// classifyIntegrityValues classifies one launch item whose recorded state changed. Items that appear or
+// disappear are not reported here: the launch item program check already raises them.
+func classifyIntegrityValues(was, now string) (output.Severity, []string) {
+	prev, ok1 := parseIntegrity(was)
+	cur, ok2 := parseIntegrity(now)
+	if !ok1 || !ok2 {
+		return output.SeverityMedium, []string{"changed"}
 	}
-	was, now := split(o.Items), split(c.Items)
-
-	byLevel := map[output.Severity][]string{}
-	for k, nv := range now {
-		ov, ok := was[k]
-		if !ok || ov == nv {
-			continue
-		}
-		prev, ok1 := parseIntegrity(ov)
-		cur, ok2 := parseIntegrity(nv)
-		if !ok1 || !ok2 {
-			byLevel[output.SeverityMedium] = append(byLevel[output.SeverityMedium], k+": changed")
-			continue
-		}
-		sev, reasons := classifyIntegrity(prev, cur)
-		if len(reasons) == 0 {
-			sev, reasons = output.SeverityMedium, []string{"changed"}
-		}
-		byLevel[sev] = append(byLevel[sev], k+": "+strings.Join(reasons, "; "))
-	}
-
-	var out []output.Finding
-	for _, sev := range []output.Severity{output.SeverityHigh, output.SeverityMedium} {
-		if lines := byLevel[sev]; len(lines) > 0 {
-			sort.Strings(lines)
-			out = append(out, output.Finding{
-				ID: id, CheckID: id, Status: output.StatusFail, Severity: sev,
-				Title:       fmt.Sprintf("%d %s changed since baseline (%s)", len(lines), m.label+"(s)", sev),
-				Detail:      strings.Join(lines, "\n"),
-				Remediation: m.fix,
-			})
-		}
-	}
-	if lines := byLevel[output.SeverityInfo]; len(lines) > 0 {
-		sort.Strings(lines)
-		out = append(out, output.Finding{
-			ID: id, CheckID: id, Status: output.StatusInfo,
-			Title:  fmt.Sprintf("%d %s updated since baseline", len(lines), m.label+"(s)"),
-			Detail: strings.Join(lines, "\n"),
-		})
-	}
-	return out
+	return classifyIntegrity(prev, cur)
 }

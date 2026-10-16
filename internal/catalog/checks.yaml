@@ -238,6 +238,14 @@ checks:
     sudo: true
 
   # --- 7. Advanced ---
+  - id: advanced.applications
+    section: advanced
+    name: Installed applications (deep)
+    description: Applications in /Applications and ~/Applications with bundle id, version and code-signing identity
+    builtin: app-inventory
+    deep: true
+    sudo: false
+    timeout: 180s
   - id: advanced.endpoint-security
     section: advanced
     name: Endpoint security (launchctl)

@@ -114,3 +114,18 @@ func TestLaunchIntegrity(t *testing.T) {
 		t.Errorf("verified programs pass: %+v", f)
 	}
 }
+
+func TestApplications(t *testing.T) {
+	row := func(path, state, signer string) string {
+		return strings.Join([]string{path, "com.x", "1.0", state, "T", signer, "abc"}, "\t")
+	}
+	data := runner.AppsHeader + "\n" + row("/Applications/A.app", "developer-id", "Developer ID Application: A") + "\n" +
+		row("/Applications/B.app", "other-signed", appStoreSigner) + "\n" + row("/Applications/C.app", "unsigned", "-") + "\n"
+	fs := eval(t, res("advanced.applications", data))
+	if len(fs) != 2 || fs[0].Status != output.StatusFail || !strings.Contains(fs[0].Detail, "C.app") || strings.Contains(fs[0].Detail, "A.app") {
+		t.Fatalf("only the unsigned app is a finding: %+v", fs)
+	}
+	if !strings.Contains(fs[1].Detail, "1 Mac App Store") || !strings.Contains(fs[1].Detail, "1 Developer ID") || !strings.Contains(fs[1].Detail, "1 unsigned") {
+		t.Errorf("summary: %+v", fs[1])
+	}
+}

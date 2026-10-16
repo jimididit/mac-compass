@@ -412,3 +412,74 @@ func TestLaunchIntegrity(t *testing.T) {
 		t.Errorf("a missing program has nothing to hash or verify: %v", g)
 	}
 }
+
+func TestAppInventory(t *testing.T) {
+	var mu sync.Mutex
+	sign := map[string]string{
+		"/Applications/Foo.app":           devIDCodesign + "\nCDHash=aaaa1111",
+		"/Applications/Utilities/Bar.app": "/Applications/Utilities/Bar.app: code object is not signed at all",
+		"/Users/me/Applications/Baz.app":  adhocCodesign,
+	}
+	plist := map[string]string{
+		"/Applications/Foo.app/Contents/Info.plist":           `{"CFBundleIdentifier":"com.foo","CFBundleShortVersionString":"1.2","CFBundleVersion":"120"}`,
+		"/Applications/Utilities/Bar.app/Contents/Info.plist": `{"CFBundleIdentifier":"com.bar","CFBundleVersion":"7"}`,
+	}
+	d := deps{
+		home: "/Users/me",
+		listDir: func(dir string) ([]string, error) {
+			switch dir {
+			case "/Applications":
+				return []string{"Foo.app", "Utilities", "notes.txt"}, nil
+			case "/Applications/Utilities":
+				return []string{"Bar.app"}, nil
+			case "/Users/me/Applications":
+				return []string{"Baz.app"}, nil
+			}
+			return nil, os.ErrNotExist
+		},
+		exec: func(ctx context.Context, argv ...string) (string, string, int, error) {
+			mu.Lock()
+			defer mu.Unlock()
+			switch argv[0] {
+			case "/usr/bin/plutil":
+				if j, ok := plist[argv[len(argv)-1]]; ok {
+					return j, "", 0, nil
+				}
+				return "", "no such file", 1, nil
+			case "/usr/bin/codesign":
+				out := sign[argv[len(argv)-1]]
+				if strings.Contains(out, "not signed at all") {
+					return "", out, 1, nil
+				}
+				return "", out, 0, nil
+			}
+			return "", "", 0, errors.New("unexpected command " + argv[0])
+		},
+	}
+	out, err := appInventory(context.Background(), d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := strings.Split(strings.TrimSpace(out), "\n")
+	if rows[0] != AppsHeader || len(rows) != 4 {
+		t.Fatalf("want header and 3 apps (notes.txt ignored, Utilities searched), got %q", rows)
+	}
+	by := map[string][]string{}
+	for _, r := range rows[1:] {
+		c := strings.Split(r, "\t")
+		if len(c) != 7 {
+			t.Fatalf("row has %d columns: %q", len(c), r)
+		}
+		by[c[0]] = c
+	}
+	// columns: path bundle_id version state team signer cdhash
+	if c := by["/Applications/Foo.app"]; c[1] != "com.foo" || c[2] != "1.2" || c[3] != "developer-id" || c[4] != "ABCDE12345" || c[6] != "aaaa1111" {
+		t.Errorf("Foo: %v", c)
+	}
+	if c := by["/Applications/Utilities/Bar.app"]; c[1] != "com.bar" || c[2] != "7" || c[3] != "unsigned" || c[6] != "-" {
+		t.Errorf("Bar (build number when there is no short version): %v", c)
+	}
+	if c := by["/Users/me/Applications/Baz.app"]; c[1] != "-" || c[3] != "adhoc" {
+		t.Errorf("Baz (no Info.plist still listed): %v", c)
+	}
+}
