@@ -357,3 +357,38 @@ func TestMonitorSaysWhenBaselineLacksNewChecks(t *testing.T) {
 		t.Errorf("no note once nothing is uncovered, got %q", res.State.LastError)
 	}
 }
+
+func TestPlistWatchPaths(t *testing.T) {
+	base := JobSpec{Binary: "/usr/local/bin/mac-compass", StateDir: "/Users/me/state", Interval: time.Hour}
+	b, err := Plist(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "WatchPaths") || strings.Contains(string(b), "ThrottleInterval") {
+		t.Errorf("a schedule-only job must not watch folders:\n%s", b)
+	}
+	base.WatchPaths = []string{"/Library/LaunchDaemons", "/Users/me/a&b"}
+	b, err = Plist(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"<key>WatchPaths</key>", "<string>/Library/LaunchDaemons</string>", "<string>/Users/me/a&amp;b</string>",
+		"<key>ThrottleInterval</key>", "<integer>3600</integer>", "<key>StartInterval</key>"} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("plist missing %q:\n%s", want, b)
+		}
+	}
+}
+
+func TestWatchPaths(t *testing.T) {
+	present := map[string]bool{"/Library/LaunchDaemons": true, "/Library/LaunchAgents": true, "/Users/me/Library/LaunchAgents": true, "/Applications": true}
+	exists := func(p string) bool { return present[p] }
+	got := strings.Join(WatchPaths("/Users/me", false, exists), ",")
+	if got != "/Library/LaunchDaemons,/Library/LaunchAgents,/Users/me/Library/LaunchAgents" {
+		t.Errorf("launch item folders only without deep: %s", got)
+	}
+	got = strings.Join(WatchPaths("/Users/me", true, exists), ",")
+	if !strings.HasSuffix(got, ",/Applications") || strings.Contains(got, "/Users/me/Applications") {
+		t.Errorf("deep adds Applications, and skips a folder that does not exist: %s", got)
+	}
+}

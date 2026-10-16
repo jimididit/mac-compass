@@ -162,6 +162,33 @@ jobs:
           plutil -lint "$RUNNER_TEMP/la/io.github.jimididit.mac-compass.monitor.plist"
           ! sudo ./mac-compass monitor install --scope system --no-load --launch-dir "$RUNNER_TEMP/ld" --state-dir "$RUNNER_TEMP/sys" 2>out/monitor-system.txt
           grep -q "refusing to install a root daemon" out/monitor-system.txt
+      - name: monitor --realtime (plist, then a real trigger when launchd allows it)
+        timeout-minutes: 6
+        run: |
+          set -e
+          LA="$RUNNER_TEMP/rt-la"; ST="$RUNNER_TEMP/rt-state"
+          ./mac-compass monitor install --realtime --deep --no-sudo --no-load --launch-dir "$LA" --state-dir "$ST" --every 15m | tee out/monitor-realtime.txt
+          PL="$LA/io.github.jimididit.mac-compass.monitor.plist"
+          plutil -lint "$PL"
+          plutil -extract WatchPaths json -o - "$PL" | tee out/monitor-watchpaths.json | jq -e 'index("/Library/LaunchDaemons") != null and index("/Applications") != null'
+          plutil -extract ThrottleInterval raw -o - "$PL" | grep -qx 60
+          # Best effort: load it and see whether a change to a watched folder starts a run. A runner without a
+          # GUI session may refuse to load the job; that is reported, not failed.
+          mkdir -p "$HOME/Library/LaunchAgents"
+          DOMAIN="gui/$(id -u)"
+          if launchctl bootstrap "$DOMAIN" "$PL" 2> out/monitor-realtime-bootstrap.txt; then
+            for i in $(seq 1 20); do [ -f "$ST/state.json" ] && break; sleep 3; done
+            R1=$(jq -r '.runs // 0' "$ST/state.json" 2>/dev/null || echo 0)
+            touch "$HOME/Library/LaunchAgents/com.example.realtime-test.plist"
+            R2=$R1
+            for i in $(seq 1 40); do sleep 5; R2=$(jq -r '.runs // 0' "$ST/state.json" 2>/dev/null || echo 0); [ "$R2" -gt "$R1" ] && break; done
+            rm -f "$HOME/Library/LaunchAgents/com.example.realtime-test.plist"
+            launchctl bootout "$DOMAIN/io.github.jimididit.mac-compass.monitor" || true
+            echo "realtime: runs before=$R1 after=$R2" | tee -a out/monitor-realtime.txt
+            [ "$R2" -gt "$R1" ]
+          else
+            echo "realtime: launchd would not load the job here ($(cat out/monitor-realtime-bootstrap.txt)); plist checked only" | tee -a out/monitor-realtime.txt
+          fi
       - name: summary
         if: always()
         run: |

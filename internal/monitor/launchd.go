@@ -36,6 +36,35 @@ type JobSpec struct {
 	StateDir string // where state, baseline and logs live
 	Interval time.Duration
 	Args     []string // extra arguments after "monitor run"
+	// WatchPaths are folders launchd also watches: when one changes, the job runs at once instead of waiting for
+	// the next interval. Empty means schedule only.
+	WatchPaths []string
+}
+
+// ThrottleSeconds is the shortest gap between two runs triggered by watched folders, so a burst of changes
+// (an installer writing many files) causes one run.
+const ThrottleSeconds = 60
+
+// WatchPaths lists the folders worth watching for new or replaced launch items, and for applications in deep
+// mode. Folders that do not exist are left out.
+func WatchPaths(home string, deep bool, exists func(string) bool) []string {
+	candidates := []string{"/Library/LaunchDaemons", "/Library/LaunchAgents"}
+	if home != "" {
+		candidates = append(candidates, path.Join(home, "Library", "LaunchAgents"))
+	}
+	if deep {
+		candidates = append(candidates, "/Applications")
+		if home != "" {
+			candidates = append(candidates, path.Join(home, "Applications"))
+		}
+	}
+	var out []string
+	for _, p := range candidates {
+		if exists(p) {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // LogPath is where the job's output goes.
@@ -77,6 +106,16 @@ func Plist(j JobSpec) ([]byte, error) {
 	key("StartInterval")
 	fmt.Fprintf(&b, "\t<integer>%d</integer>\n", int(j.Interval.Seconds()))
 	boolean("RunAtLoad", true)
+	if len(j.WatchPaths) > 0 {
+		key("WatchPaths")
+		b.WriteString("\t<array>\n")
+		for _, p := range j.WatchPaths {
+			fmt.Fprintf(&b, "\t\t<string>%s</string>\n", esc(p))
+		}
+		b.WriteString("\t</array>\n")
+		key("ThrottleInterval")
+		fmt.Fprintf(&b, "\t<integer>%d</integer>\n", ThrottleSeconds)
+	}
 	str("ProcessType", "Background")
 	boolean("LowPriorityIO", true)
 	key("Nice")

@@ -146,6 +146,13 @@ allow Script Editor in System Settings > Notifications and check that Focus is o
 the last alert time, and the alert is always in `monitor.log` and `latest.json` whether or not a banner showed.
 A run whose findings were already announced reports `alert-active` instead of alerting again.
 
+**Near-real-time mode.** `monitor install --realtime` makes launchd also run the monitor the moment a launch item
+folder (`/Library/LaunchDaemons`, `/Library/LaunchAgents`, `~/Library/LaunchAgents`) gains, loses or replaces a file,
+and with `--deep` the Applications folders too, so a new launch item is seen in about a minute instead of within
+the hour. Runs triggered this way are at least 60 seconds apart, so an installer writing many files causes one run.
+launchd only sees changes to a folder's entries: a plist edited in place without being replaced is caught by the
+next scheduled run, which is why the schedule stays. Alerts are de-duplicated as usual.
+
 Options: `--every 30m` (minimum 5 minutes), `--notify-on high`, `--suppress file.yaml` to accept reviewed
 findings, `--no-load` to write the plist without loading it, and `monitor run --rebaseline` to accept the current
 state as the new baseline after a legitimate change (an update, new software).
