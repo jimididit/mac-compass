@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-17
+
 ### Fixed
 - The privacy grants checks (`security-tools.tcc-system` and `tcc-user`) now say why they could not read the database
   instead of guessing. They probe a Full Disk Access protected folder and report whether the app running mac-compass
