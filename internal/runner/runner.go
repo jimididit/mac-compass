@@ -33,6 +33,7 @@ type Options struct {
 	Timeout         time.Duration
 	SkipSudo        bool // If true, skip checks that require sudo
 	VMMode          bool // If true, skip checks that require hardware (e.g. T2)
+	Deep            bool // If true, also run the slower, more sensitive checks marked deep
 	MacOSMajor      int  // Detected macOS major version; 0 = unknown (no version gating)
 	SudoAllowPrompt bool // If true and running in a TTY, sudo will prompt for password when needed
 	OutWriter       io.Writer
@@ -67,6 +68,9 @@ type Result struct {
 func Run(ctx context.Context, ch catalog.Check, opts Options, out, errw io.Writer) Result {
 	if ch.Sudo && opts.SkipSudo {
 		return Result{Skipped: true, SkipReason: "requires sudo", Err: fmt.Errorf("%w: check requires sudo (omit --no-sudo or run with sudo)", ErrSkipped)}
+	}
+	if ch.Deep && !opts.Deep {
+		return Result{Skipped: true, SkipReason: "deep mode only (add --deep)"}
 	}
 	if ch.RequiresHardware && opts.VMMode {
 		return Result{Skipped: true, SkipReason: "requires hardware (VM mode)"}

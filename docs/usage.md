@@ -36,6 +36,7 @@ These work on every command that runs checks.
 | `--sarif <file>` | Also write a SARIF 2.1.0 report ([details](#report-formats)) |
 | `--progress` | Print one line per check to stderr as it finishes (slow machines, CI logs) |
 | `--redact` | Mask the host name and your user name in output, reports and snapshots |
+| `--deep` | Also run the slower, more sensitive checks ([details](#deep-mode)) |
 
 ## Reading the results
 
@@ -155,6 +156,35 @@ example `sudo cp mac-compass /usr/local/bin/`); otherwise whoever can replace th
 monitor does not repair a damaged baseline silently, because that would hide changes: it reports the error and
 asks for `--rebaseline`. The job's own plist appears as a launch item on the next comparison, so install it
 before you take the baseline you care about.
+
+### Deep mode
+
+`--deep` adds checks that are slower or more sensitive than the defaults, so they are off unless you ask. It works
+with every command that runs checks, and `monitor install --deep` schedules the monitor with it.
+
+**Launch item integrity** (`persistence.launch-integrity`) records, for every launch item, the SHA-256 of its plist
+and of the program it runs, and whether the program's code signature still verifies. A hash on its own changes
+whenever software updates itself, so the comparison does not stop at "the hash changed":
+
+| What changed since the baseline | Reported as |
+|---|---|
+| Program changed, developer signature still verifies | info: "updated" (never alerts) |
+| Program's signature no longer verifies, or its signer, program path or signing state changed | **high** |
+| Plist changed (arguments, schedule, settings) | medium |
+| Program changed and nothing signed vouches for it (a script, an unsigned or ad-hoc program) | medium |
+
+A single `--deep` run also reports any launch item program whose signature fails verification, with no baseline
+needed. New and removed launch items are not repeated here: the launch item program check already reports them.
+
+```bash
+mac-compass snapshot --deep -o before.json
+mac-compass compare before.json --deep
+mac-compass monitor install --deep
+```
+
+The monitor's own launch item is left out, because reinstalling or updating mac-compass changes it. A baseline taken
+without `--deep` does not contain the deep checks; the monitor says so, and `monitor run --rebaseline` adds them.
+Deep checks hash every launch item program, so a run takes a few seconds longer.
 
 ## Evidence bundles
 

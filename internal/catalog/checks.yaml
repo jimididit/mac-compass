@@ -323,6 +323,15 @@ checks:
     builtin: launchd-targets
     sudo: false
     attack: [T1543.001, T1543.004]
+  - id: persistence.launch-integrity
+    section: persistence
+    name: Launch item integrity (deep)
+    description: SHA-256 of each launch item's plist and program, and whether the program's code signature still verifies
+    builtin: launch-integrity
+    deep: true
+    sudo: false
+    timeout: 120s
+    attack: [T1543.001, T1543.004, T1554]
   - id: persistence.shell-rc
     section: persistence
     name: Shell startup files

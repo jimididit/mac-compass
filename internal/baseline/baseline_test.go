@@ -333,3 +333,66 @@ func TestLaunchTargetsExtractorAndSignerChange(t *testing.T) {
 		t.Errorf("notarization and flag changes alone must not be reported: %+v", r.Findings)
 	}
 }
+
+func integrityRow(label, plistSHA, program, sha, state, sig, team, signer string) string {
+	return strings.Join([]string{"daemon", label, "/Library/LaunchDaemons/" + label + ".plist", plistSHA, program, sha, state, sig, team, signer}, "\t")
+}
+
+func integritySnap(rows ...string) Snapshot {
+	out := runner.IntegrityHeader + "\n" + strings.Join(rows, "\n") + "\n"
+	return snap(output.HostInfo{}, res("persistence.launch-integrity", out))
+}
+
+func TestLaunchIntegrityDiff(t *testing.T) {
+	dev := func(sha, sig string) string {
+		return integrityRow("com.foo", "p1", "/Library/Foo/foo", sha, "developer-id", sig, "ABCDE12345", "Developer ID Application: Foo Inc")
+	}
+	titles := func(r Result) string {
+		var s []string
+		for _, f := range r.Findings {
+			s = append(s, string(f.Status)+"/"+string(f.Severity)+" "+f.Detail)
+		}
+		return strings.Join(s, " | ")
+	}
+	base := integritySnap(dev("h1", "valid"))
+
+	if r := Compare(base, integritySnap(dev("h1", "valid"))); len(r.Findings) != 0 {
+		t.Errorf("an unchanged item must produce nothing: %s", titles(r))
+	}
+	// A routine update: the hash changes, the developer signature still verifies.
+	r := Compare(base, integritySnap(dev("h2", "valid")))
+	if len(r.Findings) != 1 || r.Findings[0].Status != output.StatusInfo {
+		t.Errorf("a signed update is informational only: %s", titles(r))
+	}
+	// The same file modified after signing: the signature stops verifying.
+	r = Compare(base, integritySnap(dev("h2", "invalid")))
+	if len(r.Findings) != 1 || r.Findings[0].Severity != output.SeverityHigh || !strings.Contains(r.Findings[0].Detail, "no longer verifies") {
+		t.Errorf("a broken signature is high: %s", titles(r))
+	}
+	// Re-signed by someone else.
+	other := integrityRow("com.foo", "p1", "/Library/Foo/foo", "h2", "developer-id", "valid", "ZZZZZ99999", "Developer ID Application: Other Inc")
+	r = Compare(base, integritySnap(other))
+	if len(r.Findings) != 1 || r.Findings[0].Severity != output.SeverityHigh || !strings.Contains(r.Findings[0].Detail, "signer changed") {
+		t.Errorf("a changed signer is high: %s", titles(r))
+	}
+	// Same program, new launch arguments: only the plist changed.
+	edited := integrityRow("com.foo", "p2", "/Library/Foo/foo", "h1", "developer-id", "valid", "ABCDE12345", "Developer ID Application: Foo Inc")
+	r = Compare(base, integritySnap(edited))
+	if len(r.Findings) != 1 || r.Findings[0].Severity != output.SeverityMedium || !strings.Contains(r.Findings[0].Detail, "plist") {
+		t.Errorf("a changed plist is medium: %s", titles(r))
+	}
+	// A script has no signature, so a changed script is medium.
+	scriptOld := integritySnap(integrityRow("com.s", "p1", "/usr/local/bin/run.sh", "s1", "script", "-", "-", "-"))
+	scriptNew := integritySnap(integrityRow("com.s", "p1", "/usr/local/bin/run.sh", "s2", "script", "-", "-", "-"))
+	if r := Compare(scriptOld, scriptNew); len(r.Findings) != 1 || r.Findings[0].Severity != output.SeverityMedium {
+		t.Errorf("a changed unsigned program is medium: %s", titles(r))
+	}
+}
+
+// The monitor's own job changes whenever it is reinstalled or updated; it is not part of the comparison.
+func TestLaunchIntegrityIgnoresMonitorJob(t *testing.T) {
+	s := integritySnap(integrityRow(runner.MonitorLabel, "p1", "/x/mac-compass", "h1", "adhoc", "valid", "-", "-"))
+	if got := s.Checks["persistence.launch-integrity"].Items; len(got) != 0 {
+		t.Errorf("monitor job should be left out: %v", got)
+	}
+}

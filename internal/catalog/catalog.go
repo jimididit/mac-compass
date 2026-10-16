@@ -21,7 +21,7 @@ var idRe = regexp.MustCompile(`^[a-z0-9-]+\.[a-z0-9-]+$`)
 var attackRe = regexp.MustCompile(`^T\d{4}(\.\d{3})?$`)
 
 // KnownBuiltins lists the in-process collectors a check may name. The runner must implement each.
-var KnownBuiltins = []string{"launchd-targets", "process-signatures"}
+var KnownBuiltins = []string{"launchd-targets", "process-signatures", "launch-integrity"}
 
 // KnownSections lists the section ids a check may use.
 var KnownSections = []string{
@@ -47,6 +47,8 @@ type Check struct {
 	// applies to; 0 means unbounded. Outside the range the check is skipped.
 	MacOSMin int `yaml:"macos_min"`
 	MacOSMax int `yaml:"macos_max"`
+	// Deep marks a slower, more sensitive check that runs only with --deep.
+	Deep bool `yaml:"deep"`
 	// Optional marks a check whose binary may be absent on some macOS versions;
 	// a missing binary is reported as skipped, not failed.
 	Optional bool `yaml:"optional"`

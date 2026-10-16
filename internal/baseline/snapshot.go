@@ -23,6 +23,9 @@ const (
 	KindSet Kind = "set"
 	// KindState entries are settings; the diff reports a change from one value to another.
 	KindState Kind = "state"
+	// KindKeyed entries are "identity => state" items; the diff reports a changed state for an identity
+	// present in both snapshots and classifies what changed.
+	KindKeyed Kind = "keyed"
 )
 
 // Entry is the normalized inventory from one check.

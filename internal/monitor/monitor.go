@@ -114,6 +114,19 @@ func Run(ctx context.Context, o Options) (Result, error) {
 	}
 
 	cmp := baseline.Compare(base, cur)
+	// Checks the baseline never recorded (for example the deep ones, after --deep was turned on) are not
+	// compared; say so, or the monitor would look as if it were covering them.
+	var uncovered []string
+	for _, id := range cmp.NotComparable {
+		_, inCur := cur.Checks[id]
+		_, inBase := base.Checks[id]
+		if inCur && !inBase {
+			uncovered = append(uncovered, id)
+		}
+	}
+	if len(uncovered) > 0 {
+		st.LastError = "the baseline does not cover " + strings.Join(uncovered, ", ") + "; run monitor run --rebaseline to include it"
+	}
 	findings := cmp.Findings
 	if o.Filter != nil {
 		findings = o.Filter(findings)

@@ -43,6 +43,7 @@ func runnerOptions(cmd *cobra.Command, macMajor int) runner.Options {
 		UseSudo:         !noSudo,
 		SkipSudo:        noSudo,
 		VMMode:          vmMode,
+		Deep:            deepMode,
 		MacOSMajor:      macMajor,
 		SudoAllowPrompt: hasTTY(),
 		OutWriter:       cmd.OutOrStdout(),

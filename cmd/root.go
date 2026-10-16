@@ -17,6 +17,7 @@ import (
 var (
 	noSudo       bool
 	vmMode       bool
+	deepMode     bool
 	timeout      time.Duration
 	jsonOutput   bool
 	reportPath   string
@@ -46,6 +47,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&suppressFile, "suppress", "", "YAML file of reviewed findings to accept (id, optional match, reason, optional expires)")
 	rootCmd.PersistentFlags().StringVar(&htmlPath, "html", "", "Also write a self-contained HTML report to this file (mode 0600)")
 	rootCmd.PersistentFlags().StringVar(&sarifPath, "sarif", "", "Also write a SARIF 2.1.0 report to this file (mode 0600)")
+	rootCmd.PersistentFlags().BoolVar(&deepMode, "deep", false, "Also run the slower, more sensitive checks (launch item hashes and signature verification)")
 	rootCmd.PersistentFlags().BoolVar(&progress, "progress", false, "Print one line per check to stderr as it finishes (useful on slow machines and in CI logs)")
 	rootCmd.CompletionOptions.DisableDefaultCmd = false
 	rootCmd.SilenceErrors = true // Execute prints the error once

@@ -99,3 +99,18 @@ func TestLaunchdTargets_RealRunnerOutput(t *testing.T) {
 		}
 	}
 }
+
+func TestLaunchIntegrity(t *testing.T) {
+	row := func(label, sig string) string {
+		return strings.Join([]string{"daemon", label, "/Library/LaunchDaemons/" + label + ".plist", "p", "/Library/Foo/" + label, "h", "developer-id", sig, "ABCDE12345", "Foo Inc"}, "\t")
+	}
+	data := runner.IntegrityHeader + "\n" + row("com.good", "valid") + "\n" + row("com.bad", "invalid") + "\n"
+	f := one(t, eval(t, res("persistence.launch-integrity", data)))
+	if f.Status != output.StatusFail || f.Severity != output.SeverityHigh || !strings.Contains(f.Detail, "com.bad") || strings.Contains(f.Detail, "com.good") {
+		t.Errorf("only the program with a failing signature is reported: %+v", f)
+	}
+	f = one(t, eval(t, res("persistence.launch-integrity", runner.IntegrityHeader+"\n"+row("com.good", "valid")+"\n")))
+	if f.Status != output.StatusPass {
+		t.Errorf("verified programs pass: %+v", f)
+	}
+}
