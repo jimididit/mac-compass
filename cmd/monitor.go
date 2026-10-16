@@ -27,6 +27,7 @@ var (
 	monLaunchDir string
 	monNoLoad    bool
 	monPurge     bool
+	monRealtime  bool
 )
 
 func init() {
@@ -41,6 +42,7 @@ func init() {
 
 	monitorInstallCmd.Flags().DurationVar(&monEvery, "every", time.Hour, "How often to run (minimum 5m)")
 	monitorInstallCmd.Flags().StringVar(&monNotifyOn, "notify-on", "medium", "Alert on new findings at or above this severity")
+	monitorInstallCmd.Flags().BoolVar(&monRealtime, "realtime", false, "Also run the moment the launch item folders change (and the Applications folders with --deep), not only on the schedule")
 	monitorInstallCmd.Flags().BoolVar(&monNoLoad, "no-load", false, "Write the plist but do not load it into launchd")
 	monitorUninstallCmd.Flags().BoolVar(&monPurge, "purge", false, "Also delete the monitor's baseline, history and logs")
 
@@ -230,7 +232,11 @@ var monitorInstallCmd = &cobra.Command{
 			}
 			extra = append(extra, "--suppress", abs)
 		}
+		home, _ := runner.InvokingUserHome()
 		spec := monitor.JobSpec{Binary: bin, StateDir: stateDir, Interval: monEvery, Args: extra}
+		if monRealtime {
+			spec.WatchPaths = monitor.WatchPaths(home, deepMode, func(p string) bool { _, err := os.Stat(p); return err == nil })
+		}
 		plist, err := monitor.Plist(spec)
 		if err != nil {
 			return err
@@ -239,7 +245,6 @@ var monitorInstallCmd = &cobra.Command{
 		if err := os.MkdirAll(stateDir, 0o700); err != nil {
 			return err
 		}
-		home, _ := runner.InvokingUserHome()
 		launchDir := monLaunchDir
 		if launchDir == "" {
 			launchDir = monitor.LaunchDir(scope, home)
@@ -253,6 +258,9 @@ var monitorInstallCmd = &cobra.Command{
 		}
 		w := cmd.OutOrStdout()
 		fmt.Fprintf(w, "Wrote %s\nState and logs: %s\n", plistPath, stateDir)
+		if len(spec.WatchPaths) > 0 {
+			fmt.Fprintf(w, "Also runs when these folders change: %s\n", strings.Join(spec.WatchPaths, ", "))
+		}
 
 		if monNoLoad {
 			fmt.Fprintf(w, "Not loaded (--no-load). To load it: launchctl bootstrap %s %s\n", domain(scope), monitor.Quote([]string{plistPath}))
