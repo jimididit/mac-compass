@@ -75,8 +75,8 @@ jobs:
           # Full Disk Access diagnosis; it must never fail with no explanation.
           for f in run-all run-all-nosudo; do
             for id in security-tools.tcc-system security-tools.tcc-user; do
-              jq -r --arg id "$id" --arg f "$f" '.sections[].checks[] | select(.id==$id) | "\($f) \($id): skipped=\(.skipped // false) ok=\(.ok) \(.skip_reason // "") \(.stdout | split("\n") | map(select(test("tcc-db"))) | join("")) \(.stderr | split("\n") | map(select(test("full-disk-access"))) | join(""))"' out/$f.json | tee -a out/tcc-diagnosis.txt
-              jq -e --arg id "$id" '.sections[].checks[] | select(.id==$id) | (.skipped or .ok or (.stderr | test("full-disk-access: (denied|granted|unknown)")))' out/$f.json >/dev/null
+              jq -r --arg id "$id" --arg f "$f" '.sections[].checks[] | select(.id==$id) | "\($f) \($id): skipped=\(.skipped // false) ok=\(.ok) \(.skip_reason // "") \((.stdout // "") | split("\n") | map(select(test("tcc-db"))) | join("")) \((.stderr // "") | split("\n") | map(select(test("full-disk-access"))) | join(""))"' out/$f.json | tee -a out/tcc-diagnosis.txt
+              jq -e --arg id "$id" '.sections[].checks[] | select(.id==$id) | (.skipped or .ok or ((.stderr // "") | test("full-disk-access: (denied|granted|unknown)")))' out/$f.json >/dev/null
             done
           done
       - name: baseline (snapshot, plant a change, compare)
