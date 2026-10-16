@@ -74,13 +74,25 @@ func errorHint(r output.CheckResult) string {
 	text := strings.ToLower(r.Error + " " + r.Stderr)
 	switch {
 	case strings.HasPrefix(r.ID, "security-tools.tcc-") && (strings.Contains(text, "authorization denied") || strings.Contains(text, "unable to open database")):
-		return "The privacy database is protected. Give your terminal app Full Disk Access (System Settings > Privacy & Security > Full Disk Access), quit and reopen it, and run again."
+		return tccHint(text)
 	case strings.Contains(text, "timeout after"):
 		return "The check took too long and was stopped. Run again; if it keeps timing out, raise --timeout."
 	case strings.Contains(text, "operation not permitted"):
 		return "macOS blocked access. Grant your terminal app Full Disk Access in System Settings > Privacy & Security."
 	}
 	return ""
+}
+
+// tccHint explains a refused privacy database read. The check probes a Full Disk Access protected folder and
+// prints what it found ("full-disk-access: denied|granted|unknown"), so the advice can name the actual cause.
+func tccHint(text string) string {
+	switch {
+	case strings.Contains(text, "full-disk-access: denied"):
+		return "macOS reports that the app running mac-compass has no Full Disk Access. Turn it on for that app (System Settings > Privacy & Security > Full Disk Access), then quit the app completely with Command+Q and reopen it; closing its window is not enough. Run again."
+	case strings.Contains(text, "full-disk-access: granted"):
+		return "The app running mac-compass has Full Disk Access, but macOS still refuses the privacy database. A management profile or a security product can block it; ask whoever manages this Mac. Other checks are not affected."
+	}
+	return "macOS refused access to the privacy database. Give the app running mac-compass Full Disk Access (System Settings > Privacy & Security > Full Disk Access), then quit it completely with Command+Q and reopen it. If it is already on, a management profile may be blocking access."
 }
 
 // order ranks findings: fails by severity, then errors, then info, then pass.

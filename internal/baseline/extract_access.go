@@ -45,8 +45,8 @@ func init() {
 		"security-tools.xprotect-version": {KindState, firstLine},
 		"security-tools.profiles":         {KindSet, allLines},
 		"security-tools.mdm-enrollment":   {KindState, joinedLines},
-		"security-tools.tcc-system":       {KindSet, allLines},
-		"security-tools.tcc-user":         {KindSet, allLines},
+		"security-tools.tcc-system":       {KindSet, tccGrants},
+		"security-tools.tcc-user":         {KindSet, tccGrants},
 	} {
 		extractors[id] = ex
 	}
@@ -71,6 +71,17 @@ func init() {
 	} {
 		metas[id] = m
 	}
+}
+
+// tccGrants keeps the "service|client|client_type" rows and drops the check's own status lines.
+func tccGrants(r output.CheckResult) []string {
+	var out []string
+	for _, l := range nonEmptyLines(r.Stdout) {
+		if strings.Count(l, "|") == 2 {
+			out = append(out, l)
+		}
+	}
+	return out
 }
 
 // localUsers keeps human accounts (uid >= 500, not _service) plus any uid 0 account.

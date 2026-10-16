@@ -420,7 +420,19 @@ checks:
     name: Privacy grants (system)
     description: Apps allowed Full Disk Access, Accessibility, Screen Recording or input monitoring (system-wide)
     script: |
-      /usr/bin/sqlite3 -readonly "/Library/Application Support/com.apple.TCC/TCC.db" "select service||'|'||client||'|'||client_type from access where auth_value=2 and service in ('kTCCServiceSystemPolicyAllFiles','kTCCServiceAccessibility','kTCCServiceScreenCapture','kTCCServiceListenEvent','kTCCServicePostEvent','kTCCServiceEndpointSecurityClient')"
+      q="select service||'|'||client||'|'||client_type from access where auth_value=2 and service in ('kTCCServiceSystemPolicyAllFiles','kTCCServiceAccessibility','kTCCServiceScreenCapture','kTCCServiceListenEvent','kTCCServicePostEvent','kTCCServiceEndpointSecurityClient')"
+      /usr/bin/sqlite3 -readonly "/Library/Application Support/com.apple.TCC/TCC.db" "$q" && exit 0
+      rc=$?
+      fda=unknown
+      for d in "~/Library/Safari" "~/Library/Mail" "~/Library/Messages" "/Library/Application Support/com.apple.TCC"; do
+        e=$(/bin/ls -- "$d" 2>&1 >/dev/null)
+        case "$e" in
+          "") fda=granted; break;;
+          *"Operation not permitted"*) fda=denied; break;;
+        esac
+      done
+      echo "full-disk-access: $fda" >&2
+      exit $rc
     sudo: true
     attack: [T1548.006]
   - id: security-tools.tcc-user
@@ -428,6 +440,23 @@ checks:
     name: Privacy grants (user)
     description: Apps allowed Accessibility, Screen Recording or input monitoring for this user
     script: |
-      /usr/bin/sqlite3 -readonly "~/Library/Application Support/com.apple.TCC/TCC.db" "select service||'|'||client||'|'||client_type from access where auth_value=2 and service in ('kTCCServiceSystemPolicyAllFiles','kTCCServiceAccessibility','kTCCServiceScreenCapture','kTCCServiceListenEvent','kTCCServicePostEvent','kTCCServiceEndpointSecurityClient')"
+      q="select service||'|'||client||'|'||client_type from access where auth_value=2 and service in ('kTCCServiceSystemPolicyAllFiles','kTCCServiceAccessibility','kTCCServiceScreenCapture','kTCCServiceListenEvent','kTCCServicePostEvent','kTCCServiceEndpointSecurityClient')"
+      f="~/Library/Application Support/com.apple.TCC/TCC.db"
+      e=$(/bin/ls -- "$f" 2>&1 >/dev/null)
+      case "$e" in
+        *"No such file"*) echo "tcc-db: absent"; exit 0;;
+      esac
+      /usr/bin/sqlite3 -readonly "$f" "$q" && exit 0
+      rc=$?
+      fda=unknown
+      for d in "~/Library/Safari" "~/Library/Mail" "~/Library/Messages" "/Library/Application Support/com.apple.TCC"; do
+        e=$(/bin/ls -- "$d" 2>&1 >/dev/null)
+        case "$e" in
+          "") fda=granted; break;;
+          *"Operation not permitted"*) fda=denied; break;;
+        esac
+      done
+      echo "full-disk-access: $fda" >&2
+      exit $rc
     sudo: false
     attack: [T1548.006]

@@ -4,6 +4,13 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Fixed
+- The privacy grants checks (`security-tools.tcc-system` and `tcc-user`) now say why they could not read the database
+  instead of guessing. They probe a Full Disk Access protected folder and report whether the app running mac-compass
+  has access, so the advice is "turn it on and quit the app with Command+Q", or "it is on but a management profile or
+  security product still blocks it". A Mac with no per-user privacy database (common when a profile pre-approves
+  permissions) is reported as having no per-user grants instead of as an error.
+
 ## [0.6.0] - 2026-10-16
 
 ### Added
