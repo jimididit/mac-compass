@@ -396,3 +396,49 @@ func TestLaunchIntegrityIgnoresMonitorJob(t *testing.T) {
 		t.Errorf("monitor job should be left out: %v", got)
 	}
 }
+
+func appRow(path, id, version, state, team, signer, cdhash string) string {
+	return strings.Join([]string{path, id, version, state, team, signer, cdhash}, "\t")
+}
+
+func appSnap(rows ...string) Snapshot {
+	return snap(output.HostInfo{}, res("advanced.applications", runner.AppsHeader+"\n"+strings.Join(rows, "\n")+"\n"))
+}
+
+func TestApplicationDiff(t *testing.T) {
+	app := func(version, cd string) string {
+		return appRow("/Applications/Foo.app", "com.foo.app", version, "developer-id", "ABCDE12345", "Developer ID Application: Foo Inc", cd)
+	}
+	base := appSnap(app("1.0", "aaa"))
+	one := func(r Result) output.Finding {
+		t.Helper()
+		if len(r.Findings) != 1 {
+			t.Fatalf("want 1 finding, got %+v", r.Findings)
+		}
+		return r.Findings[0]
+	}
+
+	if r := Compare(base, appSnap(app("1.0", "aaa"))); len(r.Findings) != 0 {
+		t.Errorf("unchanged apps produce nothing: %+v", r.Findings)
+	}
+	if f := one(Compare(base, appSnap(app("1.1", "bbb")))); f.Status != output.StatusInfo || !strings.Contains(f.Detail, "updated 1.0 -> 1.1") {
+		t.Errorf("a new version from the same signer is informational: %+v", f)
+	}
+	if f := one(Compare(base, appSnap(app("1.0", "bbb")))); f.Severity != output.SeverityMedium || !strings.Contains(f.Detail, "without a version change") {
+		t.Errorf("changed contents under the same version is medium: %+v", f)
+	}
+	resigned := appRow("/Applications/Foo.app", "com.foo.app", "1.0", "developer-id", "ZZZZZ99999", "Developer ID Application: Other Inc", "aaa")
+	if f := one(Compare(base, appSnap(resigned))); f.Severity != output.SeverityHigh || !strings.Contains(f.Detail, "signer changed") {
+		t.Errorf("a different signer is high: %+v", f)
+	}
+	// New and removed applications.
+	added := appSnap(app("1.0", "aaa"), appRow("/Applications/New.app", "com.new", "2.0", "developer-id", "QQQQQ11111", "Developer ID Application: New Inc", "ccc"))
+	f := one(Compare(base, added))
+	if f.Status != output.StatusFail || f.Severity != output.SeverityLow || !strings.Contains(f.Detail, "/Applications/New.app") {
+		t.Errorf("a new application is low: %+v", f)
+	}
+	f = one(Compare(added, base))
+	if f.Status != output.StatusInfo || !strings.Contains(f.Title, "removed") {
+		t.Errorf("a removed application is informational: %+v", f)
+	}
+}

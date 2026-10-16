@@ -9,6 +9,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
   and program plus a signature verification. Baselines and `monitor` classify a change instead of just listing it:
   a signed update is informational, a signature that stops verifying or a changed signer is high, and a changed plist
   or unverifiable program is medium. `monitor install --deep` schedules the monitor with it.
+- Deep mode also records installed applications (`advanced.applications`, 51 checks): bundle id, version, signer and
+  code-directory hash for `/Applications` and `~/Applications`. A baseline reports new apps (low), updates (info), changed
+  contents under an unchanged version (medium) and a changed signer, bundle id or signing state (high).
 - The monitor notes when its baseline predates a check that is now running, and how to include it.
 
 ## [0.5.2] - 2026-10-15

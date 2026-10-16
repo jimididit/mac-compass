@@ -15,7 +15,7 @@ Read-only checks for signs of compromise and weak security settings, explained i
 
 ---
 
-mac-compass runs a catalog of 50 read-only checks and turns their raw output into **findings**: what is wrong,
+mac-compass runs a catalog of 51 read-only checks and turns their raw output into **findings**: what is wrong,
 how serious it is, and how to fix it. Save a **baseline** on a Mac you trust, then see exactly what changed
 later.
 
@@ -111,7 +111,7 @@ machine compares clean. Accept things you have reviewed with `--suppress`. See [
 |---|---|
 | [Usage reference](docs/usage.md) | Commands, flags, reading results, JSON report, exit codes |
 | [Baselines and suppressions](docs/baseline.md) | `snapshot`, `compare`, accepting reviewed findings |
-| [Check reference](docs/checks.md) | All 50 checks, what they flag, and their MITRE ATT&CK mapping |
+| [Check reference](docs/checks.md) | All 51 checks, what they flag, and their MITRE ATT&CK mapping |
 | [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md) | For contributors |
 
 ## Supported macOS versions

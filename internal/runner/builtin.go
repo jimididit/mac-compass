@@ -35,6 +35,7 @@ var builtins = map[string]builtinFn{
 	"launchd-targets":    launchdTargets,
 	"process-signatures": processSignatures,
 	"launch-integrity":   launchIntegrity,
+	"app-inventory":      appInventory,
 }
 
 // runBuiltin runs an in-process collector with the same timeout and result shape as a command.

@@ -109,6 +109,25 @@ jobs:
           # The same snapshot against itself shows nothing for this check.
           ./mac-compass compare out/deep-a.json out/deep-a.json --json > out/deep-same.json || true
           ! jq -e '.findings[] | select(.id=="persistence.launch-integrity")' out/deep-same.json
+          # Installed applications: the inventory ran, and a new app and a new version are told apart.
+          sudo ./mac-compass advanced --deep --vm --json > out/deep-apps.json || true
+          jq -e '.sections[].checks[] | select(.id=="advanced.applications") | .ok' out/deep-apps.json
+          jq -r '.sections[].checks[] | select(.id=="advanced.applications") | .stdout' out/deep-apps.json | awk -F'\t' 'NR>1 && NF==7 {n++; if ($7 != "-") h++} END {print "apps: " n+0 " listed, " h+0 " with a code-directory hash"}' | tee -a out/deep-findings.txt
+          mkdir -p "$HOME/Applications/CompassOne.app/Contents"
+          printf '{"CFBundleIdentifier":"com.example.one","CFBundleShortVersionString":"1.0"}' > "$HOME/Applications/CompassOne.app/Contents/Info.plist"
+          plutil -convert xml1 "$HOME/Applications/CompassOne.app/Contents/Info.plist"
+          sudo ./mac-compass snapshot --deep --vm -o out/apps-a.json
+          mkdir -p "$HOME/Applications/CompassNew.app/Contents"
+          printf '{"CFBundleIdentifier":"com.example.new","CFBundleShortVersionString":"1.0"}' > "$HOME/Applications/CompassNew.app/Contents/Info.plist"
+          plutil -convert xml1 "$HOME/Applications/CompassNew.app/Contents/Info.plist"
+          printf '{"CFBundleIdentifier":"com.example.one","CFBundleShortVersionString":"1.1"}' > "$HOME/Applications/CompassOne.app/Contents/Info.plist"
+          plutil -convert xml1 "$HOME/Applications/CompassOne.app/Contents/Info.plist"
+          sudo ./mac-compass snapshot --deep --vm -o out/apps-b.json
+          rm -rf "$HOME/Applications/CompassOne.app" "$HOME/Applications/CompassNew.app"
+          sudo chown "$(id -un)" out/apps-a.json out/apps-b.json
+          ./mac-compass compare out/apps-a.json out/apps-b.json --json > out/apps-compare.json || true
+          jq -e '.findings[] | select(.id=="advanced.applications" and .status=="fail" and .severity=="low" and (.detail | contains("CompassNew.app")))' out/apps-compare.json
+          jq -e '.findings[] | select(.id=="advanced.applications" and .status=="info" and (.detail | contains("updated 1.0 -> 1.1")))' out/apps-compare.json
       - name: evidence bundle (collect, verify, tamper)
         run: |
           set -e

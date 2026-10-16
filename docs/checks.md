@@ -99,6 +99,7 @@ Extra launchd inspection.
 
 | Check id | What it looks at | sudo | Judged | Baseline | ATT&CK |
 |---|---|:-:|:-:|:-:|---|
+| `advanced.applications` | **Deep mode only.** Applications in /Applications and ~/Applications with bundle id, version and code-signing identity |  | ✓ | ✓ |  |
 | `advanced.endpoint-security` | Security-related launchd services | yes |  |  |  |
 
 ## Hardening
