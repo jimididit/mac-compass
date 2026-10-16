@@ -68,6 +68,17 @@ jobs:
           grep -q "Score: " out/posture.txt
           jq -e '.posture | (.controls | length) >= 16 and (.passed + .failed) > 0 and .score >= 0 and .score <= 100' out/run-all.json
           grep -q "Hardening posture" out/report.html
+      - name: privacy database checks explain themselves
+        run: |
+          set -e
+          # Each privacy check either returns data, reports there is no per-user database, or fails with a
+          # Full Disk Access diagnosis; it must never fail with no explanation.
+          for f in run-all run-all-nosudo; do
+            for id in security-tools.tcc-system security-tools.tcc-user; do
+              jq -r --arg id "$id" --arg f "$f" '.sections[].checks[] | select(.id==$id) | "\($f) \($id): skipped=\(.skipped // false) ok=\(.ok) \(.skip_reason // "") \((.stdout // "") | split("\n") | map(select(test("tcc-db"))) | join("")) \((.stderr // "") | split("\n") | map(select(test("full-disk-access"))) | join(""))"' out/$f.json | tee -a out/tcc-diagnosis.txt
+              jq -e --arg id "$id" '.sections[].checks[] | select(.id==$id) | (.skipped or .ok or ((.stderr // "") | test("full-disk-access: (denied|granted|unknown)")))' out/$f.json >/dev/null
+            done
+          done
       - name: baseline (snapshot, plant a change, compare)
         run: |
           set -e

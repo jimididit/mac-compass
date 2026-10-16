@@ -241,6 +241,11 @@ func evalTCC(scope string) evaluator {
 			out = append(out, info(id, fmt.Sprintf("%d app(s) hold sensitive privacy permissions (%s)", len(bundles), scope), strings.Join(bundles, "\n")))
 		}
 		if len(out) == 0 {
+			if strings.Contains(r.Stdout, "tcc-db: absent") {
+				// A Mac whose privacy permissions are all pre-approved by a management profile never needs the
+				// per-user database; no file means no per-user grants.
+				return []output.Finding{pass(id, "There is no privacy database for this user, so no per-user grants are recorded")}
+			}
 			out = append(out, pass(id, "No apps hold the monitored privacy permissions ("+scope+")"))
 		}
 		return out

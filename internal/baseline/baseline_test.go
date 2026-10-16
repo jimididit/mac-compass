@@ -442,3 +442,14 @@ func TestApplicationDiff(t *testing.T) {
 		t.Errorf("a removed application is informational: %+v", f)
 	}
 }
+
+// The check's own status lines are not privacy grants and must not enter the baseline.
+func TestTCCGrantsIgnoresStatusLines(t *testing.T) {
+	s := snap(output.HostInfo{}, res("security-tools.tcc-user", "tcc-db: absent\n"), res("security-tools.tcc-system", "kTCCServiceAccessibility|com.vendor.app|0\nfull-disk-access: granted\n"))
+	if got := s.Checks["security-tools.tcc-user"].Items; len(got) != 0 {
+		t.Errorf("absent marker leaked into the baseline: %v", got)
+	}
+	if got := s.Checks["security-tools.tcc-system"].Items; len(got) != 1 || got[0] != "kTCCServiceAccessibility|com.vendor.app|0" {
+		t.Errorf("grants: %v", got)
+	}
+}
