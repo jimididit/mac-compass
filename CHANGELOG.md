@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-16
+
 ### Added
 - `--deep` mode with a new check, `persistence.launch-integrity` (50 checks): SHA-256 of every launch item's plist
   and program plus a signature verification. Baselines and `monitor` classify a change instead of just listing it:

@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "0.5.2" // set by build: -ldflags "-X github.com/jimididit/mac-compass/cmd.version=..."
+var version = "0.6.0" // set by build: -ldflags "-X github.com/jimididit/mac-compass/cmd.version=..."
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
